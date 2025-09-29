@@ -1,7 +1,47 @@
-    ## Project folder structure
+# 🐾 Wildlife Valparai – Community Content Platform
 
-    ```
-    wildlife-valparai/
+Wildlife Valparai is a **creator-driven platform** that allows users to share wildlife sightings and stories in an **immersive audio-visual blog format**.  
+Creators can upload photos with short audio narrations or write blogs, while viewers enjoy a seamless content experience.  
+The platform rewards top performers with **points, recognition, and monthly cash payouts**, while monetizing via **Google Ads and sponsored ads**.
+
+---
+
+## 🚀 Application Workflow
+
+### 📌 User Flow
+
+1. **User/Creator** registers or logs in.
+2. **Viewers/Audience** can:
+   - View photos with an **audio experience** (default).
+   - Switch to blogs view.
+3. **Creators** access their dashboard to:
+   - Upload photos + 1-minute audio.
+   - Write and publish blogs.
+   - Earn points for contributions.
+4. **Top members/performers** get rewarded with **cash payouts every month**.
+
+### 📌 Admin Flow
+
+1. Admins access an **Admin Dashboard** to:
+   - Monitor top performers.
+   - Manage user content and performance.
+   - Process payments to creators.
+2. Admins initiate payments via the **Payment Page**.
+
+💡 **Monetization**: The website earns through **Google Ads** and **Sponsored Ads**.
+
+---
+
+## 🔄 Workflow Diagram
+
+![Application Workflow](./wv%20workflow.png)
+
+---
+
+## 📂 Project Folder Structure
+
+```
+wildlife-valparai/
     │
     ├── public/
     │   ├── index.html
@@ -180,4 +220,40 @@
     ├── tailwind.config.js
     ├── package.json
     └── README.md
-    ```
+
+```
+
+## 🛠️ Tech Stack
+
+Frontend: React + TailwindCSS
+
+Backend: Firebase (Firestore, Functions, Storage, Auth)
+
+Audio Processing: Custom Firebase Functions
+
+Payments: Integrated Payment API
+
+Monetization: Google Ads + Sponsored Ads
+
+## 📌 Features
+
+🔊 Photo + Audio storytelling
+
+✍️ Blog creation & publishing
+
+🏆 Points & leaderboard system
+
+💰 Monthly creator payouts
+
+📊 Admin performance tracking
+
+🌐 Multi-language support (EN, TA, HI)
+
+## 📖 License
+
+This project is licensed under the MIT License.
+Feel free to contribute and build upon it.
+
+```
+
+```
