@@ -253,7 +253,3 @@ Monetization: Google Ads + Sponsored Ads
 
 This project is licensed under the MIT License.
 Feel free to contribute and build upon it.
-
-```
-
-```
