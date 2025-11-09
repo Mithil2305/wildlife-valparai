@@ -2,6 +2,7 @@ import React from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { PointsProvider } from "./contexts/PointsContext";
 import AppRoutes from "./routes";
 
 function App() {
@@ -9,7 +10,9 @@ function App() {
 		<ThemeProvider>
 			<LanguageProvider>
 				<AuthProvider>
-					<AppRoutes />
+					<PointsProvider>
+						<AppRoutes />
+					</PointsProvider>
 				</AuthProvider>
 			</LanguageProvider>
 		</ThemeProvider>

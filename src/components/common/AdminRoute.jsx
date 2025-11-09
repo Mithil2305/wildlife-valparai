@@ -1,10 +1,23 @@
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { Navigate } from "react-router-dom";
+import LoadingSpinner from "./LoadingSpinner";
 
 const AdminRoute = ({ children }) => {
-	const { currentUser } = useAuth();
-	// Add admin check logic here
-	return currentUser ? children : <Navigate to="/login" />;
+	const { user, isAdmin, loading } = useAuth();
+
+	if (loading) {
+		return <LoadingSpinner />;
+	}
+
+	if (!user) {
+		return <Navigate to="/login" replace />;
+	}
+
+	if (!isAdmin) {
+		return <Navigate to="/" replace />;
+	}
+
+	return children;
 };
 
 export default AdminRoute;
