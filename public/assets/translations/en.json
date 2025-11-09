@@ -1,1 +1,67 @@
-ECHO is off.
+{
+	"common": {
+		"loading": "Loading...",
+		"submit": "Submit",
+		"cancel": "Cancel",
+		"save": "Save",
+		"delete": "Delete",
+		"edit": "Edit",
+		"view": "View",
+		"search": "Search",
+		"filter": "Filter",
+		"back": "Back",
+		"next": "Next",
+		"previous": "Previous",
+		"close": "Close",
+		"yes": "Yes",
+		"no": "No"
+	},
+	"nav": {
+		"home": "Home",
+		"about": "About",
+		"sightings": "Sightings",
+		"blogs": "Blogs",
+		"contact": "Contact",
+		"login": "Login",
+		"register": "Register",
+		"profile": "Profile",
+		"dashboard": "Dashboard",
+		"logout": "Logout",
+		"leaderboard": "Leaderboard"
+	},
+	"home": {
+		"title": "Wildlife Valparai",
+		"subtitle": "Discover and share wildlife experiences",
+		"cta": "Explore Now",
+		"welcome": "Welcome to Wildlife Valparai"
+	},
+	"sightings": {
+		"title": "Wildlife Sightings",
+		"submit": "Submit Sighting",
+		"species": "Species",
+		"location": "Location",
+		"date": "Date",
+		"description": "Description",
+		"noSightings": "No sightings found"
+	},
+	"blogs": {
+		"title": "Conservation Blogs",
+		"create": "Create Blog",
+		"category": "Category",
+		"author": "Author",
+		"readMore": "Read More",
+		"noBlogs": "No blogs found"
+	},
+	"profile": {
+		"title": "My Profile",
+		"points": "Points",
+		"contributions": "Contributions",
+		"badges": "Badges",
+		"settings": "Settings"
+	},
+	"footer": {
+		"copyright": "© 2024 Wildlife Valparai. All rights reserved.",
+		"privacy": "Privacy Policy",
+		"terms": "Terms of Service"
+	}
+}

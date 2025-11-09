@@ -1,196 +1,126 @@
-import { useState } from "react";
-import { Outlet, NavLink, useLocation } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { Outlet, Link, useLocation } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const AdminLayout = () => {
-	const { currentUser, loading } = useAuth();
+	const { user, logout, loading } = useAuth();
 	const location = useLocation();
-	const [sidebarOpen, setSidebarOpen] = useState(false);
+	const [sidebarOpen, setSidebarOpen] = useState(true);
+	const [scrolled, setScrolled] = useState(false);
 
-	if (loading) {
-		return <LoadingSpinner />;
-	}
+	useEffect(() => {
+		const handleScroll = () => setScrolled(window.scrollY > 20);
+		window.addEventListener("scroll", handleScroll);
+		return () => window.removeEventListener("scroll", handleScroll);
+	}, []);
 
-	// Admin navigation items
-	const navItems = [
-		{ path: "/admin", label: "Dashboard", icon: "📊" },
-		{ path: "/admin/sightings", label: "Sightings", icon: "🐾" },
-		{ path: "/admin/users", label: "Users", icon: "👥" },
-		{ path: "/admin/blogs", label: "Blogs", icon: "📝" },
-		{ path: "/admin/payments", label: "Payments", icon: "💰" },
-		{ path: "/admin/performance", label: "Performance", icon: "📈" },
-		{ path: "/admin/ads", label: "Ads Management", icon: "📢" },
+	if (loading) return <LoadingSpinner />;
+
+	const adminNavLinks = [
+		{ to: "/admin", label: "Dashboard", icon: "📊" },
+		{ to: "/admin/sightings", label: "Sightings", icon: "�" },
+		{ to: "/admin/users", label: "Users", icon: "👥" },
+		{ to: "/admin/blogs", label: "Blogs", icon: "📝" },
+		{ to: "/admin/payments", label: "Payments", icon: "💰" },
+		{ to: "/admin/performance", label: "Performance", icon: "📈" },
+		{ to: "/admin/ads", label: "Ads", icon: "📢" },
 	];
 
-	const isActivePath = (path) => {
-		if (path === "/admin") {
-			return location.pathname === "/admin";
-		}
+	const isActive = (path) => {
+		if (path === "/admin") return location.pathname === "/admin";
 		return location.pathname.startsWith(path);
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-100 flex">
+		<div className="min-h-screen bg-gradient-to-br from-[#EDF1D6] via-[#EDF1D6] to-[#9DC08B] flex">
 			{/* Sidebar */}
-			<div
-				className={`${sidebarOpen ? "block" : "hidden"} lg:block lg:w-64 bg-gray-800 text-white`}
+			<aside
+				className={`${sidebarOpen ? "w-64" : "w-20"} transition-all duration-300 bg-gradient-to-br from-[#40513B] to-[#609966] text-white fixed h-full z-50 shadow-2xl`}
 			>
-				<div className="p-4">
-					{/* Logo and Title */}
-					<div className="flex items-center space-x-3 mb-8">
-						<div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold">WV</span>
-						</div>
-						<div>
-							<h1 className="text-lg font-bold">Wildlife Valparai</h1>
-							<p className="text-xs text-gray-400">Admin Panel</p>
+				<div className="flex flex-col h-full">
+					<div className="p-6 border-b border-white/10">
+						<div
+							className={`flex items-center ${sidebarOpen ? "space-x-3" : "justify-center"}`}
+						>
+							<div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center">
+								<span className="text-2xl">🦁</span>
+							</div>
+							{sidebarOpen && (
+								<div>
+									<h1 className="text-lg font-bold">Wildlife Valparai</h1>
+									<p className="text-xs text-white/70">Admin Panel</p>
+								</div>
+							)}
 						</div>
 					</div>
 
-					{/* User Info */}
-					{currentUser && (
-						<div className="mb-6 p-3 bg-gray-700 rounded-lg">
-							<p className="font-medium truncate">
-								{currentUser.displayName || currentUser.email}
-							</p>
-							<p className="text-xs text-gray-400 truncate">
-								{currentUser.email}
-							</p>
-							<p className="text-xs text-green-400 mt-1">● Admin</p>
-						</div>
-					)}
-
-					{/* Navigation */}
-					<nav className="space-y-1">
-						{navItems.map((item) => (
-							<NavLink
-								key={item.path}
-								to={item.path}
-								className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-									isActivePath(item.path)
-										? "bg-blue-600 text-white"
-										: "text-gray-300 hover:bg-gray-700 hover:text-white"
-								}`}
+					<nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+						{adminNavLinks.map((link) => (
+							<Link
+								key={link.to}
+								to={link.to}
+								className={`flex items-center ${sidebarOpen ? "space-x-3 px-4" : "justify-center px-2"} py-3 rounded-xl transition-all duration-300 ${isActive(link.to) ? "bg-white/20 text-white shadow-lg scale-105" : "text-white/70 hover:bg-white/10 hover:text-white"}`}
+								title={!sidebarOpen ? link.label : ""}
 							>
-								<span className="text-lg">{item.icon}</span>
-								<span>{item.label}</span>
-							</NavLink>
+								<span className="text-xl">{link.icon}</span>
+								{sidebarOpen && (
+									<span className="font-medium">{link.label}</span>
+								)}
+							</Link>
 						))}
 					</nav>
 
-					{/* Quick Stats */}
-					<div className="mt-8 p-4 bg-gray-700 rounded-lg">
-						<h3 className="text-sm font-semibold mb-3">Quick Stats</h3>
-						<div className="space-y-2 text-xs">
-							<div className="flex justify-between">
-								<span>Pending Sightings:</span>
-								<span className="text-yellow-400">12</span>
-							</div>
-							<div className="flex justify-between">
-								<span>Total Users:</span>
-								<span className="text-green-400">1,234</span>
-							</div>
-							<div className="flex justify-between">
-								<span>This Month:</span>
-								<span className="text-blue-400">$245</span>
-							</div>
-						</div>
-					</div>
-
-					{/* Back to Site */}
-					<div className="mt-6">
-						<a
-							href="/"
-							className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+					<div className="p-4 border-t border-white/10">
+						<button
+							onClick={() => setSidebarOpen(!sidebarOpen)}
+							className="w-full flex items-center justify-center px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
 						>
-							<span>←</span>
-							<span>Back to Site</span>
-						</a>
+							<span className="text-xl">{sidebarOpen ? "←" : "→"}</span>
+						</button>
+						{sidebarOpen && (
+							<button
+								onClick={logout}
+								className="w-full mt-2 flex items-center space-x-2 px-4 py-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-white transition-colors"
+							>
+								<span>🚪</span>
+								<span>Logout</span>
+							</button>
+						)}
 					</div>
 				</div>
-			</div>
+			</aside>
 
 			{/* Main Content */}
-			<div className="flex-1 flex flex-col overflow-hidden">
-				{/* Top Bar */}
-				<header className="bg-white shadow-sm border-b border-gray-200">
+			<div
+				className={`flex-1 ${sidebarOpen ? "ml-64" : "ml-20"} transition-all duration-300`}
+			>
+				<header
+					className={`sticky top-0 z-40 transition-all duration-500 ${scrolled ? "bg-white/95 backdrop-blur-lg shadow-lg" : "bg-white/80 backdrop-blur-sm"}`}
+				>
 					<div className="flex items-center justify-between px-6 py-4">
-						<div className="flex items-center">
-							<button
-								onClick={() => setSidebarOpen(!sidebarOpen)}
-								className="lg:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-							>
-								<span className="text-lg">☰</span>
-							</button>
-							<h1 className="ml-4 text-xl font-semibold text-gray-900">
-								{navItems.find((item) => isActivePath(item.path))?.label ||
-									"Admin Dashboard"}
-							</h1>
-						</div>
-
+						<h1 className="text-2xl font-bold bg-gradient-to-r from-[#40513B] to-[#609966] bg-clip-text text-transparent">
+							{adminNavLinks.find((link) => isActive(link.to))?.label ||
+								"Dashboard"}
+						</h1>
 						<div className="flex items-center space-x-4">
-							<div className="text-sm text-gray-600">
-								{new Date().toLocaleDateString("en-US", {
-									weekday: "long",
-									year: "numeric",
-									month: "long",
-									day: "numeric",
-								})}
+							<div className="text-sm text-[#609966] font-medium hidden md:block">
+								{user?.displayName || user?.email || "Admin"}
 							</div>
-
-							{/* Notifications */}
-							<button className="p-2 text-gray-600 hover:text-gray-900 relative">
-								<span className="text-lg">🔔</span>
-								<span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+							<button className="relative p-2 text-[#609966] hover:text-[#40513B] hover:scale-110 transition-transform">
+								<span className="text-xl">🔔</span>
+								<span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
 							</button>
-
-							{/* User Menu */}
-							<div className="relative">
-								<button className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900">
-									<div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-										{currentUser?.displayName?.charAt(0) ||
-											currentUser?.email?.charAt(0) ||
-											"A"}
-									</div>
-									<span className="hidden md:block">
-										{currentUser?.displayName || "Admin"}
-									</span>
-								</button>
-							</div>
 						</div>
 					</div>
 				</header>
 
-				{/* Main Content Area */}
-				<main className="flex-1 overflow-auto p-6">
-					<div className="max-w-7xl mx-auto">
+				<main className="p-6">
+					<div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 min-h-[600px] border border-[#9DC08B]/20">
 						<Outlet />
 					</div>
 				</main>
-
-				{/* Footer */}
-				<footer className="bg-white border-t border-gray-200 py-4 px-6">
-					<div className="flex items-center justify-between text-sm text-gray-600">
-						<div>
-							© {new Date().getFullYear()} Wildlife Valparai. All rights
-							reserved.
-						</div>
-						<div className="flex items-center space-x-4">
-							<span>Admin Panel v1.0</span>
-							<span className="text-green-500">● System Online</span>
-						</div>
-					</div>
-				</footer>
 			</div>
-
-			{/* Mobile Sidebar Overlay */}
-			{sidebarOpen && (
-				<div
-					className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-					onClick={() => setSidebarOpen(false)}
-				/>
-			)}
 		</div>
 	);
 };
