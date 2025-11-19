@@ -15,7 +15,5 @@
  */
 export const compressImage = async (file) => {
 	console.warn("Image compression is a stub. Returning original file.");
-
-	// Placeholder: just return the original file
-	return Promise.resolve(file);
+	return Promise.resolve(file); // Returns original, uncompressed file
 };

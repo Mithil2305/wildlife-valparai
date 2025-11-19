@@ -19,65 +19,10 @@ import {
 } from "./firebase.js";
 import { compressImage } from "./imageCompressor.js";
 import { compressAudio } from "./audioCompressor.js";
-
-// This is the path to your Vercel serverless function as described in the PDF
-const GENERATE_UPLOAD_URL_ENDPOINT = "/api/generate-upload-url";
+import { uploadMediaToR2 } from "./r2Upload.js";
 
 /**
- * Step 1: Get a presigned URL from our Vercel serverless function.
- * @param {string} filename - The name of the file to upload.
- * @returns {Promise<string>} The presigned URL for uploading.
- */
-export const getPresignedUrl = async (filename) => {
-	try {
-		const response = await fetch(GENERATE_UPLOAD_URL_ENDPOINT, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({ filename }),
-		});
-
-		if (!response.ok) {
-			throw new Error("Failed to get presigned URL from server.");
-		}
-
-		const { presignedUrl } = await response.json();
-		return presignedUrl;
-	} catch (error) {
-		console.error("Error getting presigned URL:", error);
-		throw error;
-	}
-};
-
-/**
- * Step 2: Upload the file data directly to Cloudflare R2 using the presigned URL.
- * @param {string} presignedUrl - The URL from Step 1.
- * @param {File} file - The file to upload.
- * @returns {Promise<void>}
- */
-export const uploadFileToR2 = async (presignedUrl, file) => {
-	try {
-		const response = await fetch(presignedUrl, {
-			method: "PUT",
-			body: file,
-			headers: {
-				"Content-Type": file.type,
-			},
-		});
-
-		if (!response.ok) {
-			throw new Error("Cloudflare R2 upload failed.");
-		}
-	} catch (error) {
-		console.error("Error uploading file to R2:", error);
-		throw error;
-	}
-};
-
-/**
- * Creates a "photoAudio" post.
- * This implements the full workflow from section 5 of the PDF.
+ * Creates a "photoAudio" post using Cloudflare R2.
  * @param {string} creatorId - The user's UID.
  * @param {string} creatorUsername - The user's username (denormalized).
  * @param {File} photoFile - The raw photo file.
@@ -93,31 +38,24 @@ export const createPhotoAudioPost = async (
 	title
 ) => {
 	try {
-		// A. Compress files (using stubs for now)
+		console.log("Starting photo/audio post creation...");
+
+		// A. Compress files (optional - stubs for now)
 		const compressedPhoto = await compressImage(photoFile);
 		const compressedAudio = await compressAudio(audioFile);
 
-		// B. Get presigned URLs for both files
-		// Note: Use unique filenames, e.g., by prepending userId and timestamp
-		const photoFilename = `${creatorId}-${Date.now()}-${compressedPhoto.name}`;
-		const audioFilename = `${creatorId}-${Date.now()}-${compressedAudio.name}`;
+		console.log("Files compressed, uploading to R2...");
 
-		const photoPresignedUrl = await getPresignedUrl(photoFilename);
-		const audioPresignedUrl = await getPresignedUrl(audioFilename);
+		// B. Upload to Cloudflare R2 and get public URLs
+		const { photoUrl, audioUrl } = await uploadMediaToR2(
+			compressedPhoto,
+			compressedAudio,
+			creatorId
+		);
 
-		// C. Upload files to R2 in parallel
-		await Promise.all([
-			uploadFileToR2(photoPresignedUrl, compressedPhoto),
-			uploadFileToR2(audioPresignedUrl, compressedAudio),
-		]);
+		console.log("Files uploaded to R2:", { photoUrl, audioUrl });
 
-		// D. Get the final public URLs
-		const photoUrl =
-			new URL(photoPresignedUrl).origin + new URL(photoPresignedUrl).pathname;
-		const audioUrl =
-			new URL(audioPresignedUrl).origin + new URL(audioPresignedUrl).pathname;
-
-		// E. Create the Firestore document in /posts
+		// C. Create the Firestore document in /posts
 		const newPostData = {
 			creatorId: creatorId,
 			creatorUsername: creatorUsername,
@@ -132,6 +70,7 @@ export const createPhotoAudioPost = async (
 		};
 
 		const docRef = await addDoc(postsCollection, newPostData);
+		console.log("Post created successfully with ID:", docRef.id);
 		return docRef;
 	} catch (error) {
 		console.error("Error creating photo/audio post:", error);
@@ -159,8 +98,8 @@ export const createBlogPost = async (
 			creatorUsername: creatorUsername,
 			createdAt: serverTimestamp(),
 			type: "blog",
-			photoUrl: "", // Blogs don't have media
-			audioUrl: "", // Blogs don't have media
+			photoUrl: "",
+			audioUrl: "",
 			title: title,
 			blogContent: blogContent,
 			likeCount: 0,
@@ -183,24 +122,15 @@ export const createBlogPost = async (
 export const getCreatorPosts = async (userId) => {
 	if (!userId) return [];
 	try {
-		// --- MODIFICATION START ---
-		// 1. Remove the orderBy from the query.
-		// We only filter by creatorId now.
 		const q = query(postsCollection, where("creatorId", "==", userId));
-		// --- MODIFICATION END ---
-
 		const snapshot = await getDocs(q);
 		const posts = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-		// --- MODIFICATION START ---
-		// 2. Sort the results in JavaScript *after* fetching.
-		// We use toMillis() to compare the Firestore Timestamps.
 		posts.sort((a, b) => {
 			const timeA = a.createdAt?.toMillis() || 0;
 			const timeB = b.createdAt?.toMillis() || 0;
-			return timeB - timeA; // (b - a) for descending order (newest first)
+			return timeB - timeA;
 		});
-		// --- MODIFICATION END ---
 
 		return posts;
 	} catch (error) {
@@ -216,7 +146,7 @@ export const getCreatorPosts = async (userId) => {
  */
 export const getPost = async (postId) => {
 	try {
-		const postRef = postDoc(postId); // Use postDoc from firebase.js
+		const postRef = postDoc(postId);
 		const postSnap = await getDoc(postRef);
 		if (postSnap.exists()) {
 			return { id: postSnap.id, ...postSnap.data() };
@@ -238,10 +168,10 @@ export const getPost = async (postId) => {
  */
 export const updateBlogPost = async (postId, data) => {
 	try {
-		const postRef = postDoc(postId); // Use postDoc from firebase.js
+		const postRef = postDoc(postId);
 		await updateDoc(postRef, {
 			...data,
-			updatedAt: serverTimestamp(), // Add an 'updatedAt' timestamp
+			updatedAt: serverTimestamp(),
 		});
 	} catch (error) {
 		console.error("Error updating blog post:", error);
@@ -258,16 +188,13 @@ export const updateBlogPost = async (postId, data) => {
  */
 export const deleteBlogPost = async (postId) => {
 	try {
-		const postRef = postDoc(postId); // Use postDoc from firebase.js
-		// WARNING: This does not delete subcollections.
+		const postRef = postDoc(postId);
 		await deleteDoc(postRef);
 	} catch (error) {
 		console.error("Error deleting blog post:", error);
 		throw error;
 	}
 };
-
-// --- FUNCTIONS FOR COMMENTS ---
 
 /**
  * Fetches all comments for a specific post.
@@ -295,11 +222,10 @@ export const getPostComments = async (postId) => {
  */
 export const addPostComment = async (postId, userId, username, text) => {
 	const postRef = postDoc(postId);
-	const newCommentRef = doc(commentsCollection(postId)); // Create a ref for the new comment
+	const newCommentRef = doc(commentsCollection(postId));
 
 	try {
 		await runTransaction(db, async (transaction) => {
-			// 1. Create the new comment document
 			const newCommentData = {
 				userId: userId,
 				username: username,
@@ -308,7 +234,6 @@ export const addPostComment = async (postId, userId, username, text) => {
 			};
 			transaction.set(newCommentRef, newCommentData);
 
-			// 2. Atomically increment the commentCount on the parent post
 			transaction.update(postRef, {
 				commentCount: increment(1),
 			});
@@ -327,14 +252,12 @@ export const addPostComment = async (postId, userId, username, text) => {
  */
 export const deletePostComment = async (postId, commentId) => {
 	const postRef = postDoc(postId);
-	const commentRef = doc(db, "posts", postId, "comments", commentId); // Correct path
+	const commentRef = doc(db, "posts", postId, "comments", commentId);
 
 	try {
 		await runTransaction(db, async (transaction) => {
-			// 1. Delete the comment document
 			transaction.delete(commentRef);
 
-			// 2. Atomically decrement the commentCount
 			transaction.update(postRef, {
 				commentCount: increment(-1),
 			});
@@ -345,7 +268,6 @@ export const deletePostComment = async (postId, commentId) => {
 	}
 };
 
-// --- FUNCTION FOR "LATEST POSTS" ---
 /**
  * Fetches the most recent posts to show as "Related Posts".
  * @param {number} count - The number of posts to fetch.

@@ -1,0 +1,16 @@
+name = "wildlife-upload-worker"
+main = "index.js"
+compatibility_date = "2025-01-19"
+
+# R2 Bucket Binding
+[[r2_buckets]]
+binding = "WILDLIFE_BUCKET"
+bucket_name = "wildlife-valparai"
+
+# Environment Variables
+[vars]
+PUBLIC_BUCKET_URL = "https://pub-ec4e8abf64bd4b9688cf5a389c42ffac.r2.dev"
+
+# Production settings (optional)
+# [env.production]
+# vars = { PUBLIC_BUCKET_URL = "https://www.wildlifevalparai.com" }

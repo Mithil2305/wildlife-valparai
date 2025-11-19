@@ -16,77 +16,47 @@ import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import toast from "react-hot-toast";
 
 // --- Animation Variants ---
-
-// Variants for the main grid container (staggers its children)
 const gridContainerVariants = {
 	hidden: { opacity: 0 },
 	show: {
 		opacity: 1,
-		transition: {
-			staggerChildren: 0.1, // Each child will animate 0.1s after the previous one
-		},
+		transition: { staggerChildren: 0.1 },
 	},
 };
 
-// Variants for each box inside the grid
 const gridItemVariants = {
 	hidden: { opacity: 0, y: 20 },
 	show: {
 		opacity: 1,
 		y: 0,
-		transition: {
-			duration: 0.4,
-			ease: "easeOut",
-		},
+		transition: { duration: 0.4, ease: "easeOut" },
 	},
 };
 
-// Variants for the list of posts (staggers its children)
-const listContainerVariants = {
-	hidden: { opacity: 0 },
-	show: {
-		opacity: 1,
-		transition: {
-			staggerChildren: 0.08,
-			delayChildren: 0.2,
-		},
-	},
-};
-
-// Variants for each item in the post list
-const listItemVariants = {
-	hidden: { opacity: 0, x: -20 },
-	show: {
-		opacity: 1,
-		x: 0,
-		transition: {
-			duration: 0.3,
-			ease: "easeOut",
-		},
-	},
-};
-
-// Bento Box Component for styling
+// Bento Box Component
 const BentoBox = ({ children, className = "", variants }) => (
 	<motion.div
 		variants={variants}
-		className={`bg-white p-6 rounded-2xl shadow-lg border border-gray-100 ${className}`}
+		className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-200 ${className}`}
 	>
 		{children}
 	</motion.div>
 );
 
 // Stat Box Component
-const StatBox = ({ icon, title, value, color, variants }) => (
-	<BentoBox variants={variants} className="flex flex-col justify-between">
+const StatBox = ({ icon, title, value, colorClass, variants }) => (
+	<BentoBox
+		variants={variants}
+		className="flex flex-col justify-between h-full"
+	>
 		<div
-			className={`w-12 h-12 rounded-lg flex items-center justify-center ${color}`}
+			className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${colorClass}`}
 		>
 			{icon}
 		</div>
 		<div>
 			<p className="text-gray-500 text-sm font-medium">{title}</p>
-			<p className="text-3xl font-bold text-gray-900">{value}</p>
+			<p className="text-2xl font-bold text-gray-900">{value}</p>
 		</div>
 	</BentoBox>
 );
@@ -97,20 +67,16 @@ const CreatorDashboard = () => {
 	const [loading, setLoading] = useState(true);
 	const navigate = useNavigate();
 
-	// Fetch user and their posts
 	useEffect(() => {
 		const fetchData = async () => {
 			setLoading(true);
 			const currentUser = auth.currentUser;
 			if (currentUser) {
-				// Fetch user profile
 				const userRef = userDoc(currentUser.uid);
 				const userSnap = await getDoc(userRef);
 				if (userSnap.exists()) {
 					setUser(userSnap.data());
 				}
-
-				// Fetch creator's posts
 				const creatorPosts = await getCreatorPosts(currentUser.uid);
 				setPosts(creatorPosts);
 			}
@@ -119,8 +85,6 @@ const CreatorDashboard = () => {
 		fetchData();
 	}, []);
 
-	// Calculate stats
-	const totalPosts = posts.length;
 	const totalLikes = posts.reduce(
 		(sum, post) => sum + (post.likeCount || 0),
 		0
@@ -130,201 +94,183 @@ const CreatorDashboard = () => {
 		0
 	);
 
-	// Handle Post Deletion
 	const handleDelete = async (postId) => {
 		if (window.confirm("Are you sure you want to delete this post?")) {
 			const deletePromise = deleteBlogPost(postId);
 			toast.promise(deletePromise, {
-				loading: "Deleting post...",
+				loading: "Deleting...",
 				success: () => {
-					// Refresh list
 					setPosts(posts.filter((post) => post.id !== postId));
-					return <b>Post deleted!</b>;
+					return "Deleted!";
 				},
-				error: <b>Could not delete post.</b>,
+				error: "Failed to delete.",
 			});
 		}
 	};
 
-	if (loading) {
-		return <LoadingSpinner />;
-	}
-
-	if (!user) {
-		return (
-			<div className="text-center p-10">
-				<h2 className="text-2xl font-bold">Error</h2>
-				<p>Could not load user data. Please try logging in again.</p>
-			</div>
-		);
-	}
+	if (loading) return <LoadingSpinner />;
+	if (!user) return <div className="p-10 text-center">Please log in.</div>;
 
 	return (
 		<div className="bg-gray-50 min-h-screen p-4 md:p-8">
 			<div className="container mx-auto max-w-7xl">
-				<motion.h1
-					initial={{ opacity: 0, y: -20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.5 }}
-					className="text-3xl font-bold text-gray-900 mb-2"
-				>
-					Welcome, {user.name}!
-				</motion.h1>
-				<motion.p
-					initial={{ opacity: 0, y: -20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.5, delay: 0.1 }}
-					className="text-gray-600 mb-8"
-				>
-					Here's an overview of your creator content.
-				</motion.p>
+				<header className="mb-8">
+					<h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+					<p className="text-gray-500">Welcome back, {user.name}</p>
+				</header>
 
-				{/* --- Bento Grid --- */}
 				<motion.div
-					className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
+					className="grid grid-cols-1 md:grid-cols-4 gap-4 auto-rows-auto"
 					variants={gridContainerVariants}
 					initial="hidden"
 					animate="show"
 				>
-					{/* Create New Post */}
+					{/* 1. Create Actions (Large Box) */}
 					<BentoBox
 						variants={gridItemVariants}
-						className="md:col-span-2 lg:col-span-2 flex flex-col items-center justify-center text-center bg-linear-to-br from-[#335833] to-[#4a7d4a] text-white"
+						className="md:col-span-2 md:row-span-2 bg-gradient-to-br from-[#335833] to-[#4a7d4a] text-white flex flex-col justify-center items-start"
 					>
-						<h2 className="text-2xl font-bold mb-4">Ready to post again?</h2>
-						<p className="text-gray-200 mb-6">
-							Create a new blog post or photo/audio content.
+						<h2 className="text-2xl font-bold mb-2">Create Content</h2>
+						<p className="text-green-100 mb-6 max-w-md">
+							Share your wildlife experiences with the world. Write a blog or
+							upload a photo with audio.
 						</p>
-						<div className="flex space-x-4">
+						<div className="flex flex-wrap gap-3">
 							<Link
 								to="/upload/blog"
-								className="flex items-center justify-center bg-white text-[#335833] font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-100 transition-all"
+								className="flex items-center bg-white text-[#335833] px-4 py-2 rounded-lg font-semibold shadow hover:bg-gray-50 transition-colors"
 							>
-								<FaFileAlt className="mr-2" /> New Blog Post
+								<FaFileAlt className="mr-2" /> Write Blog
 							</Link>
 							<Link
 								to="/upload/content"
-								className="flex items-center justify-center bg-white text-black font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-100 transition-all"
+								className="flex items-center bg-[#223d22] text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-[#1a301a] transition-colors"
 							>
-								<FaPlus className="mr-2" /> New Social Post
+								<FaPlus className="mr-2" /> Upload Social
 							</Link>
 						</div>
 					</BentoBox>
 
-					{/* Stats Boxes */}
+					{/* 2. Stats */}
 					<StatBox
 						variants={gridItemVariants}
-						icon={<FaFileAlt className="w-5 h-5 text-white" />}
+						icon={<FaFileAlt className="text-blue-600" />}
 						title="Total Posts"
-						value={totalPosts}
-						color="bg-blue-500"
+						value={posts.length}
+						colorClass="bg-blue-100"
 					/>
 					<StatBox
 						variants={gridItemVariants}
-						icon={<FaHeart className="w-5 h-5 text-white" />}
+						icon={<FaHeart className="text-red-600" />}
 						title="Total Likes"
 						value={totalLikes}
-						color="bg-red-500"
+						colorClass="bg-red-100"
 					/>
 					<StatBox
 						variants={gridItemVariants}
-						icon={<FaComment className="w-5 h-5 text-white" />}
+						icon={<FaComment className="text-purple-600" />}
 						title="Total Comments"
 						value={totalComments}
-						color="bg-green-500"
+						colorClass="bg-purple-100"
 					/>
 					<BentoBox
 						variants={gridItemVariants}
-						className="flex flex-col justify-center"
+						className="flex flex-col justify-center items-center text-center"
 					>
-						<p className="text-gray-500 text-sm font-medium">Your Points</p>
-						<p className="text-3xl font-bold text-gray-900">{user.points}</p>
+						<p className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
+							Current Rank
+						</p>
+						<div className="text-3xl font-black text-[#335833]">
+							#{user.rank || "-"}
+						</div>
+						<p className="text-sm text-gray-400 mt-1">{user.points} Points</p>
 					</BentoBox>
 
-					{/* Post Management List */}
+					{/* 3. Recent Posts Grid (Wide) */}
 					<BentoBox
 						variants={gridItemVariants}
-						className="md:col-span-3 lg:col-span-4"
+						className="md:col-span-4 bg-gray-50/50 border-none shadow-none p-0"
 					>
-						<h2 className="text-xl font-bold text-gray-900 mb-4">
-							Manage Your Posts
-						</h2>
-						<motion.div
-							className="space-y-4"
-							variants={listContainerVariants}
-							initial="hidden"
-							animate="show"
-						>
-							{posts.length > 0 ? (
-								posts.map((post) => (
+						<div className="flex justify-between items-center mb-4 px-2">
+							<h2 className="text-lg font-bold text-gray-900">
+								Recent Uploads
+							</h2>
+							<Link
+								to="/blogs/manage"
+								className="text-sm text-[#335833] font-medium hover:underline"
+							>
+								View All
+							</Link>
+						</div>
+
+						{posts.length > 0 ? (
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+								{posts.slice(0, 3).map((post) => (
 									<motion.div
 										key={post.id}
-										variants={listItemVariants}
-										whileHover={{
-											scale: 1.02,
-											transition: { duration: 0.2 },
-										}}
-										className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-gray-200 bg-gray-50"
+										whileHover={{ y: -2 }}
+										className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col"
 									>
-										<div>
+										<div className="flex items-start justify-between mb-3">
 											<span
-												className={`text-xs font-semibold px-2 py-0.5 rounded ${
+												className={`px-2 py-1 rounded text-xs font-semibold ${
 													post.type === "blog"
-														? "bg-blue-100 text-blue-800"
-														: "bg-green-100 text-green-800"
+														? "bg-blue-100 text-blue-700"
+														: "bg-green-100 text-green-700"
 												}`}
 											>
-												{post.type === "blog" ? "Blog" : "Social"}
+												{post.type === "blog" ? "Blog Post" : "Social"}
 											</span>
-											<h3 className="text-lg font-semibold text-gray-800 mt-1">
-												{post.title || "Untitled Post"}
-											</h3>
-											<p className="text-sm text-gray-500">
-												{new Date(
-													post.createdAt?.toDate()
-												).toLocaleDateString()}
+											<div className="flex gap-2">
+												{/* Edit button only for blogs for now */}
+												{post.type === "blog" && (
+													<button
+														onClick={() => navigate(`/blog/edit/${post.id}`)}
+														className="text-gray-400 hover:text-blue-600"
+														title="Edit"
+													>
+														<FaEdit />
+													</button>
+												)}
+												<button
+													onClick={() => handleDelete(post.id)}
+													className="text-gray-400 hover:text-red-600"
+													title="Delete"
+												>
+													<FaTrash />
+												</button>
+											</div>
+										</div>
+										<h3 className="font-bold text-gray-800 mb-1 truncate">
+											{post.title}
+										</h3>
+										<p className="text-xs text-gray-500 mb-4">
+											Posted{" "}
+											{new Date(post.createdAt?.toDate()).toLocaleDateString()}
+										</p>
+
+										{post.type === "photoAudio" && post.photoUrl && (
+											<div className="mt-auto h-32 rounded-lg bg-gray-100 overflow-hidden">
+												<img
+													src={post.photoUrl}
+													alt=""
+													className="w-full h-full object-cover"
+												/>
+											</div>
+										)}
+										{post.type === "blog" && (
+											<p className="mt-auto text-sm text-gray-600 line-clamp-3">
+												{post.blogContent?.substring(0, 100)}...
 											</p>
-										</div>
-										<div className="flex space-x-2 mt-4 md:mt-0">
-											<motion.button
-												whileHover={{ scale: 1.1 }}
-												whileTap={{ scale: 0.95 }}
-												onClick={() => navigate(`/blog/${post.id}`)}
-												className="p-2 text-sm text-gray-600 bg-white border rounded-lg hover:bg-gray-100 transition-colors"
-												title="View Post"
-											>
-												<FaEye />
-											</motion.button>
-											<motion.button
-												whileHover={{ scale: 1.1 }}
-												whileTap={{ scale: 0.95 }}
-												onClick={() => navigate(`/blog/edit/${post.id}`)}
-												className="p-2 text-sm text-blue-600 bg-white border rounded-lg hover:bg-gray-100 transition-colors"
-												title="Edit Post"
-											>
-												<FaEdit />
-											</motion.button>
-											<motion.button
-												whileHover={{ scale: 1.1 }}
-												whileTap={{ scale: 0.95 }}
-												onClick={() => handleDelete(post.id)}
-												className="p-2 text-sm text-red-600 bg-white border rounded-lg hover:bg-gray-100 transition-colors"
-												title="Delete Post"
-											>
-												<FaTrash />
-											</motion.button>
-										</div>
+										)}
 									</motion.div>
-								))
-							) : (
-								<motion.p
-									variants={listItemVariants}
-									className="text-gray-500 text-center py-8"
-								>
-									You haven't created any posts yet.
-								</motion.p>
-							)}
-						</motion.div>
+								))}
+							</div>
+						) : (
+							<div className="text-center py-10 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
+								No posts yet. Create one above!
+							</div>
+						)}
 					</BentoBox>
 				</motion.div>
 			</div>

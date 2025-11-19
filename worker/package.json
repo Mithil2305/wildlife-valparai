@@ -1,0 +1,23 @@
+{
+	"name": "wildlife-upload-worker",
+	"version": "1.0.0",
+	"description": "Cloudflare Worker for Wildlife Valparai media uploads to R2",
+	"main": "index.js",
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"tail": "wrangler tail",
+		"login": "wrangler login"
+	},
+	"keywords": [
+		"cloudflare",
+		"worker",
+		"r2",
+		"upload"
+	],
+	"author": "Wildlife Valparai",
+	"license": "MIT",
+	"devDependencies": {
+		"wrangler": "^3.80.0"
+	}
+}
