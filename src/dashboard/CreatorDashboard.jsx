@@ -31,7 +31,14 @@ const gridContainerVariants = {
 // Variants for each box inside the grid
 const gridItemVariants = {
 	hidden: { opacity: 0, y: 20 },
-	show: { opacity: 1, y: 0 },
+	show: {
+		opacity: 1,
+		y: 0,
+		transition: {
+			duration: 0.4,
+			ease: "easeOut",
+		},
+	},
 };
 
 // Variants for the list of posts (staggers its children)
@@ -40,7 +47,8 @@ const listContainerVariants = {
 	show: {
 		opacity: 1,
 		transition: {
-			staggerChildren: 0.05,
+			staggerChildren: 0.08,
+			delayChildren: 0.2,
 		},
 	},
 };
@@ -48,20 +56,27 @@ const listContainerVariants = {
 // Variants for each item in the post list
 const listItemVariants = {
 	hidden: { opacity: 0, x: -20 },
-	show: { opacity: 1, x: 0 },
+	show: {
+		opacity: 1,
+		x: 0,
+		transition: {
+			duration: 0.3,
+			ease: "easeOut",
+		},
+	},
 };
 
-// Bento Box Component for styling (Now accepts variants)
+// Bento Box Component for styling
 const BentoBox = ({ children, className = "", variants }) => (
 	<motion.div
-		variants={variants} // Use variants passed from parent
+		variants={variants}
 		className={`bg-white p-6 rounded-2xl shadow-lg border border-gray-100 ${className}`}
 	>
 		{children}
 	</motion.div>
 );
 
-// Stat Box Component (Now accepts and passes variants)
+// Stat Box Component
 const StatBox = ({ icon, title, value, color, variants }) => (
 	<BentoBox variants={variants} className="flex flex-col justify-between">
 		<div
@@ -174,7 +189,7 @@ const CreatorDashboard = () => {
 					{/* Create New Post */}
 					<BentoBox
 						variants={gridItemVariants}
-						className="md:col-span-2 lg:col-span-2 flex flex-col items-center justify-center text-center bg-gradient-to-br from-[#335833] to-[#4a7d4a] text-white"
+						className="md:col-span-2 lg:col-span-2 flex flex-col items-center justify-center text-center bg-linear-to-br from-[#335833] to-[#4a7d4a] text-white"
 					>
 						<h2 className="text-2xl font-bold mb-4">Ready to post again?</h2>
 						<p className="text-gray-200 mb-6">
@@ -245,6 +260,10 @@ const CreatorDashboard = () => {
 									<motion.div
 										key={post.id}
 										variants={listItemVariants}
+										whileHover={{
+											scale: 1.02,
+											transition: { duration: 0.2 },
+										}}
 										className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-lg border border-gray-200 bg-gray-50"
 									>
 										<div>
@@ -267,34 +286,43 @@ const CreatorDashboard = () => {
 											</p>
 										</div>
 										<div className="flex space-x-2 mt-4 md:mt-0">
-											<button
+											<motion.button
+												whileHover={{ scale: 1.1 }}
+												whileTap={{ scale: 0.95 }}
 												onClick={() => navigate(`/blog/${post.id}`)}
 												className="p-2 text-sm text-gray-600 bg-white border rounded-lg hover:bg-gray-100 transition-colors"
 												title="View Post"
 											>
 												<FaEye />
-											</button>
-											<button
+											</motion.button>
+											<motion.button
+												whileHover={{ scale: 1.1 }}
+												whileTap={{ scale: 0.95 }}
 												onClick={() => navigate(`/blog/edit/${post.id}`)}
 												className="p-2 text-sm text-blue-600 bg-white border rounded-lg hover:bg-gray-100 transition-colors"
 												title="Edit Post"
 											>
 												<FaEdit />
-											</button>
-											<button
+											</motion.button>
+											<motion.button
+												whileHover={{ scale: 1.1 }}
+												whileTap={{ scale: 0.95 }}
 												onClick={() => handleDelete(post.id)}
 												className="p-2 text-sm text-red-600 bg-white border rounded-lg hover:bg-gray-100 transition-colors"
 												title="Delete Post"
 											>
 												<FaTrash />
-											</button>
+											</motion.button>
 										</div>
 									</motion.div>
 								))
 							) : (
-								<p className="text-gray-500 text-center py-8">
+								<motion.p
+									variants={listItemVariants}
+									className="text-gray-500 text-center py-8"
+								>
 									You haven't created any posts yet.
-								</p>
+								</motion.p>
 							)}
 						</motion.div>
 					</BentoBox>
