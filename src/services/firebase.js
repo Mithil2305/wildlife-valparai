@@ -1,178 +1,136 @@
 import { initializeApp, setLogLevel } from "firebase/app";
 import {
-  getAuth,
-  signInAnonymously,
-  signInWithCustomToken,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  GoogleAuthProvider
+	getAuth,
+	// Auth methods
+	createUserWithEmailAndPassword,
+	signInWithEmailAndPassword,
+	signOut,
+	GoogleAuthProvider,
+	onAuthStateChanged,
+	signInWithPopup,
 } from "firebase/auth";
 import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  onSnapshot,
-  collection,
-  query,
-  where,
-  addDoc,
-  getDocs,
-  runTransaction,
-  increment,
-  Timestamp,
-  serverTimestamp
+	getFirestore,
+	// Core Firestore methods
+	doc,
+	getDoc,
+	setDoc,
+	updateDoc,
+	deleteDoc,
+	onSnapshot,
+	collection,
+	query,
+	where,
+	addDoc,
+	getDocs,
+	runTransaction,
+	increment,
+	Timestamp,
+	serverTimestamp,
+	limit,
+	orderBy,
 } from "firebase/firestore";
 
 // --- 1. Firebase Configuration ---
-// These global variables (__firebase_config, __initial_auth_token) are provided by the environment.
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-// This global variable is provided by the environment.
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// This reads the VITE_ variables from your .env file
+const firebaseConfig = {
+	apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+	authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+	projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+	storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+	messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+	appId: import.meta.env.VITE_FIREBASE_APP_ID,
+	measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+};
 
 // --- 2. Initialize Firebase ---
-let app;
-let auth;
-let db;
-let authReady = false;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+setLogLevel("Debug"); // Enable debug logging
 
-try {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  setLogLevel('Debug'); // Enable debug logging for Firestore
-} catch (error) {
-  console.error("Error initializing Firebase:", error);
-  // Handle initialization error, e.g., show a message to the user
-}
+// --- 3. Firestore Collection References (as per wv-overview.pdf) ---
+// These are now corrected to be root-level collections, matching your firestore.rules
 
-// --- 3. Authentication Handling ---
-const signIn = async () => {
-  try {
-    if (initialAuthToken) {
-      await signInWithCustomToken(auth, initialAuthToken);
-    } else {
-      await signInAnonymously(auth);
-    }
-  } catch (error) {
-    console.error("Firebase sign-in error:", error);
-  }
-};
+// /users [cite: 132-156]
+const usersCollection = collection(db, "users");
+const userDoc = (userId) => doc(db, "users", userId);
 
-// Call signIn immediately to authenticate
-signIn();
+// /users/{userId}/pointsHistory [cite: 132-134]
+const pointsHistoryCollection = (userId) =>
+	collection(db, "users", userId, "pointsHistory");
 
-// Listen for auth state changes to set authReady
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log("User is authenticated:", user.uid);
-    authReady = true;
-  } else {
-    console.log("User is signed out.");
-    authReady = false;
-    // If anonymous sign-in failed or user signed out, retry anonymous sign-in
-    if (!initialAuthToken) {
-      signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
-    }
-  }
-});
-
-// Function to get the current user ID, falling back to a random UUID for anonymous users
-const getUserId = () => {
-    return auth.currentUser?.uid || crypto.randomUUID();
-};
-
-// --- 4. Firestore Collection References (as per schema) ---
-
-// Helper function to create collection paths
-const getPublicDataPath = () => `/artifacts/${appId}/public/data`;
-
-// /users
-const usersCollection = collection(db, getPublicDataPath(), 'users');
-const userDoc = (userId) => doc(db, getPublicDataPath(), 'users', userId);
-
-// /users/{userId}/pointsHistory
-const pointsHistoryCollection = (userId) => 
-  collection(db, getPublicDataPath(), 'users', userId, 'pointsHistory');
-
-// /users/{userId}/transactionsReceived
+// /users/{userId}/transactionsReceived [cite: 135-136]
 const transactionsReceivedCollection = (userId) =>
-  collection(db, getPublicDataPath(), 'users', userId, 'transactionsReceived');
+	collection(db, "users", userId, "transactionsReceived");
 
-// /posts
-const postsCollection = collection(db, getPublicDataPath(), 'posts');
-const postDoc = (postId) => doc(db, getPublicDataPath(), 'posts', postId);
+// /posts [cite: 137-140]
+const postsCollection = collection(db, "posts");
+const postDoc = (postId) => doc(db, "posts", postId);
 
-// /posts/{postId}/likes
-const likesCollection = (postId) =>
-  collection(db, getPublicDataPath(), 'posts', postId, 'likes');
-const likeDoc = (postId, userId) => 
-  doc(db, getPublicDataPath(), 'posts', postId, 'likes', userId);
+// /posts/{postId}/likes [cite: 141-143]
+const likesCollection = (postId) => collection(db, "posts", postId, "likes");
+const likeDoc = (postId, userId) => doc(db, "posts", postId, "likes", userId);
 
-// /posts/{postId}/comments
+// /posts/{postId}/comments [cite: 144-146]
 const commentsCollection = (postId) =>
-  collection(db, getPublicDataPath(), 'posts', postId, 'comments');
+	collection(db, "posts", postId, "comments");
 
-// /usernames
-const usernamesCollection = collection(db, getPublicDataPath(), 'usernames');
-const usernameDoc = (username) => doc(db, getPublicDataPath(), 'usernames', username.toLowerCase());
+// /usernames [cite: 147-149]
+const usernamesCollection = collection(db, "usernames");
+const usernameDoc = (username) => doc(db, "usernames", username.toLowerCase());
 
-// /payments (Admin)
-const paymentsCollection = collection(db, getPublicDataPath(), 'payments');
-const paymentDoc = (paymentId) => doc(db, getPublicDataPath(), 'payments', paymentId);
+// /payments (Admin) [cite: 152-155]
+const paymentsCollection = collection(db, "payments");
+const paymentDoc = (paymentId) => doc(db, "payments", paymentId);
 
-// /sponsors (Admin)
-const sponsorsCollection = collection(db, getPublicDataPath(), 'sponsors');
-const sponsorDoc = (sponsorId) => doc(db, getPublicDataPath(), 'sponsors', sponsorId);
+// /sponsors (Admin) [cite: 156-158]
+const sponsorsCollection = collection(db, "sponsors");
+const sponsorDoc = (sponsorId) => doc(db, "sponsors", sponsorId);
 
-
-// --- 5. Export Core Services ---
+// --- 4. Export Core Services ---
 export {
-  db,
-  auth,
-  authReady,
-  getUserId,
-  // Auth methods
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  // Firestore methods and refs
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  onSnapshot,
-  collection,
-  query,
-  where,
-  addDoc,
-  getDocs,
-  runTransaction,
-  increment,
-  Timestamp,
-  serverTimestamp,
-  // Schema-specific refs
-  usersCollection,
-  userDoc,
-  pointsHistoryCollection,
-  transactionsReceivedCollection,
-  postsCollection,
-  postDoc,
-  likesCollection,
-  likeDoc,
-  commentsCollection,
-  usernamesCollection,
-  usernameDoc,
-  paymentsCollection,
-  sponsorDoc,
-  sponsorsCollection
+	db,
+	auth,
+	// Auth methods
+	createUserWithEmailAndPassword,
+	signInWithEmailAndPassword,
+	signOut,
+	GoogleAuthProvider,
+	onAuthStateChanged,
+	signInWithPopup,
+	// Firestore methods and refs
+	doc,
+	getDoc,
+	setDoc,
+	updateDoc,
+	deleteDoc,
+	onSnapshot,
+	collection,
+	query,
+	where,
+	addDoc,
+	getDocs,
+	runTransaction,
+	increment,
+	Timestamp,
+	serverTimestamp,
+	limit,
+	orderBy,
+	// Schema-specific refs
+	usersCollection,
+	userDoc,
+	pointsHistoryCollection,
+	transactionsReceivedCollection,
+	postsCollection,
+	postDoc,
+	likesCollection,
+	likeDoc,
+	commentsCollection,
+	usernamesCollection,
+	usernameDoc,
+	paymentsCollection,
+	paymentDoc,
+	sponsorDoc,
+	sponsorsCollection,
 };

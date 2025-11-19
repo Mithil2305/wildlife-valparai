@@ -8,35 +8,80 @@ import {
 	onAuthStateChanged,
 	runTransaction,
 	userDoc,
+	getDoc, // Import getDoc for Google Sign-In check
 	usernameDoc,
 	serverTimestamp,
+	updateDoc, // Import updateDoc
+	signInWithPopup, // Import signInWithPopup
 } from "./firebase.js";
 
 /**
- * Registers a new user with email, password, and username.
- * Implements the username uniqueness check as per the PDF.
- * Creates both the /usernames/{username} and /users/{userId} documents.
- * * @param {string} email
- * @param {string} password
- * @param {string} username
- * @param {string} name - User's full name
- * @returns {object} The user credential object.
- * @throws {Error} Throws an error if registration fails or username is taken.
+ * Creates the user profile and username documents in a transaction.
+ * This is a helper function used by both email and Google registration.
+ * @param {object} transaction - The Firestore transaction object.
+ * @param {string} userId - The new user's UID.
+ * @param {string} email - User's email.
+ * @param {string} name - User's display name.
+ * @param {string} username - The unique username.
+ * @param {string} accountType - "viewer" or "creator".
+ * @param {string} phone - User's phone number.
+ * @param {string} profilePhotoUrl - URL for profile photo.
  */
-export const registerUser = async (email, password, username, name) => {
+const _createUserDocuments = async (
+	transaction,
+	userId,
+	email,
+	name,
+	username,
+	accountType,
+	phone,
+	profilePhotoUrl
+) => {
+	const newUserRef = userDoc(userId);
+	const newUsernameRef = usernameDoc(username);
+
+	// 1. Create the user document as per /users/{userId} schema [cite: 132-156]
+	const newUserProfile = {
+		username: username,
+		email: email,
+		name: name,
+		phone: phone || "", // Ensure phone is stored, even if empty
+		accountType: accountType || "viewer", // Default to viewer
+		createdAt: serverTimestamp(),
+		points: 0,
+		profilePhotoUrl: profilePhotoUrl || "", // Store photo URL
+		bio: "", // Default empty bio
+	};
+	transaction.set(newUserRef, newUserProfile);
+
+	// 2. Create the username document to reserve it [cite: 147-149]
+	const newUsernameData = {
+		userId: userId,
+	};
+	transaction.set(newUsernameRef, newUsernameData);
+};
+
+/**
+ * Registers a new user with email, password, and all required fields.
+ */
+export const registerUser = async (
+	email,
+	password,
+	username,
+	name,
+	phone,
+	accountType
+) => {
 	const lowerCaseUsername = username.toLowerCase();
 	const newUsernameRef = usernameDoc(lowerCaseUsername);
 
 	try {
-		// Step 1: Check if username is taken inside a transaction
+		// Step 1: Check if username is taken inside a transaction [cite: 150-151]
 		await runTransaction(db, async (transaction) => {
 			const usernameSnap = await transaction.get(newUsernameRef);
 			if (usernameSnap.exists()) {
 				throw new Error("Username is already taken.");
 			}
-
-			// Username is available, but don't create the doc yet.
-			// We only create it *after* auth user is created.
 		});
 
 		// Step 2: Create the auth user
@@ -46,45 +91,30 @@ export const registerUser = async (email, password, username, name) => {
 			password
 		);
 		const user = userCredential.user;
-		const userId = user.uid;
 
-		// Step 3: Now, create the user data and username docs in a final transaction
+		// Step 3: Create the user data and username docs in a final transaction
 		await runTransaction(db, async (transaction) => {
-			const newUserRef = userDoc(userId);
-
-			// Create the user document as per /users/{userId} schema
-			const newUserProfile = {
-				username: lowerCaseUsername,
-				email: email,
-				name: name,
-				accountType: "viewer", // Default to "viewer" as per schema
-				createdAt: serverTimestamp(),
-				points: 0,
-				profilePhotoUrl: "", // Default
-				bio: "", // Default
-			};
-			transaction.set(newUserRef, newUserProfile);
-
-			// Create the username document to reserve it
-			const newUsernameData = {
-				userId: userId,
-			};
-			transaction.set(newUsernameRef, newUsernameData);
+			await _createUserDocuments(
+				transaction,
+				user.uid,
+				email,
+				name,
+				lowerCaseUsername,
+				accountType,
+				phone,
+				"" // No profile photo on email signup
+			);
 		});
 
 		return userCredential;
 	} catch (error) {
 		console.error("Error during registration:", error);
-		// Handle specific errors (e.g., 'auth/email-already-in-use')
 		throw error;
 	}
 };
 
 /**
  * Logs in a user with email and password.
- * @param {string} email
- * @param {string} password
- * @returns {object} The user credential object.
  */
 export const loginUser = async (email, password) => {
 	try {
@@ -114,26 +144,121 @@ export const signOut = async () => {
 
 /**
  * Attaches a listener to the user's authentication state.
- * @param {function} callback - Function to call when auth state changes.
- * @returns {function} The unsubscribe function.
  */
 export const onAuthStateChange = (callback) => {
 	return onAuthStateChanged(auth, callback);
 };
 
-// TODO: Add Google Sign-In and other providers if needed
+/**
+ * Generates a unique username from an email or name.
+ * e.g., "john.doe@gmail.com" -> "john.doe"
+ * If taken, it adds random digits: "john.doe456"
+ * This is an internal helper that MUST be called from within a transaction.
+ */
+const _generateUniqueUsername = async (transaction, baseUsername) => {
+	let username = baseUsername.replace(/[^a-z0-9]/gi, "").toLowerCase();
+	if (!username) username = "user"; // fallback
+
+	let isUnique = false;
+	let attempts = 0;
+	let finalUsername = username;
+
+	while (!isUnique && attempts < 5) {
+		const usernameRef = usernameDoc(finalUsername);
+		const usernameSnap = await transaction.get(usernameRef);
+		if (!usernameSnap.exists()) {
+			isUnique = true;
+		} else {
+			// Not unique, append 3 random digits
+			finalUsername = username + Math.floor(100 + Math.random() * 900);
+		}
+		attempts++;
+	}
+
+	if (!isUnique) {
+		// Final attempt with a timestamp to ensure uniqueness
+		finalUsername = username + Date.now().toString().slice(-5);
+	}
+
+	// Final check, though it's highly unlikely to fail now
+	const finalUsernameRef = usernameDoc(finalUsername);
+	const finalSnap = await transaction.get(finalUsernameRef);
+	if (finalSnap.exists()) {
+		throw new Error(
+			"Failed to generate a unique username after multiple attempts."
+		);
+	}
+
+	return finalUsername;
+};
+
+/**
+ * Signs in with Google.
+ * If the user is new, it creates their profile in Firestore.
+ */
 export const signInWithGoogle = async () => {
 	const provider = new GoogleAuthProvider();
-	// This logic needs to be expanded to handle new vs. returning users
-	// and create the /users and /usernames docs if it's a new user.
-	// This is more complex than email/pass registration.
-	console.warn(
-		"signInWithGoogle not fully implemented. Needs user data creation logic."
-	);
-	// try {
-	//   const result = await signInWithPopup(auth, provider);
-	//   // ... check if user is new, then create docs
-	// } catch (error) {
-	//   console.error("Google sign-in error:", error);
-	// }
+	try {
+		const result = await signInWithPopup(auth, provider);
+		const user = result.user;
+
+		// Check if user already exists in Firestore
+		const userRef = userDoc(user.uid);
+		const docSnap = await getDoc(userRef);
+
+		if (!docSnap.exists()) {
+			// This is a new user, create their profile
+			const { email, displayName, photoURL } = user;
+
+			// Generate a base username from email or name
+			let baseUsername = email.split("@")[0];
+			if (!baseUsername || baseUsername.length < 3) {
+				baseUsername = displayName.replace(/\s/g, "");
+			}
+
+			await runTransaction(db, async (transaction) => {
+				// Find a unique username
+				const uniqueUsername = await _generateUniqueUsername(
+					transaction,
+					baseUsername
+				);
+
+				// Create the user documents
+				await _createUserDocuments(
+					transaction,
+					user.uid,
+					email,
+					displayName,
+					uniqueUsername,
+					"viewer", // Default for Google sign-up
+					user.phoneNumber || "", // Get phone if available, else empty
+					photoURL
+				);
+			});
+		}
+
+		return result;
+	} catch (error) {
+		console.error("Google sign-in error:", error);
+		throw error;
+	}
+};
+
+/**
+ * Updates a user's profile document in Firestore.
+ * @param {string} userId - The UID of the user to update.
+ * @param {object} data - An object with the fields to update (e.g., { name, bio, profilePhotoUrl }).
+ * @returns {Promise<void>}
+ */
+export const updateUserProfile = async (userId, data) => {
+	if (!userId || !data) {
+		throw new Error("User ID and data are required to update profile.");
+	}
+	try {
+		const userRef = userDoc(userId);
+		await updateDoc(userRef, data);
+	} catch (error) {
+		console.error("Error updating user profile:", error);
+		throw error;
+	}
 };
