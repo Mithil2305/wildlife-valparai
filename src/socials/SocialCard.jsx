@@ -96,7 +96,7 @@ const SocialCard = ({ post }) => {
 	};
 
 	const Waveform = () => (
-		<div className="flex items-center gap-[2px] h-8 w-full">
+		<div className="flex items-center gap-0.5 h-8 w-full">
 			{[...Array(40)].map((_, i) => {
 				const height = Math.floor(Math.random() * 100) + 20 + "%";
 				return (
@@ -113,8 +113,8 @@ const SocialCard = ({ post }) => {
 	);
 
 	return (
-		<div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow p-4 flex flex-col md:flex-row gap-6">
-			<div className="md:w-56 md:h-56 w-full h-64 flex-shrink-0 relative rounded-2xl overflow-hidden bg-gray-100">
+		<div className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow p-4 flex flex-col md:flex-row gap-6">
+			<div className="md:w-56 md:h-56 w-full h-64 shrink-0 relative rounded-2xl overflow-hidden bg-gray-100">
 				<img
 					src={
 						post.photoUrl ||
@@ -125,12 +125,12 @@ const SocialCard = ({ post }) => {
 				/>
 			</div>
 
-			<div className="flex-grow flex flex-col justify-center min-w-0">
+			<div className="grow flex flex-col justify-center min-w-0">
 				{post.audioUrl && (
 					<div className="bg-[#A3B18A] rounded-2xl p-3 flex items-center gap-4 mb-4 shadow-sm relative overflow-hidden">
 						<button
 							onClick={handlePlayPause}
-							className="flex-shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center text-[#588157] shadow-sm hover:scale-105 transition-transform z-10"
+							className="shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center text-[#588157] shadow-sm hover:scale-105 transition-transform z-10"
 						>
 							{isPlaying ? (
 								<FaPause size={14} />
@@ -139,7 +139,7 @@ const SocialCard = ({ post }) => {
 							)}
 						</button>
 
-						<div className="flex-grow flex items-center justify-center h-10 z-10">
+						<div className="grow flex items-center justify-center h-10 z-10">
 							<Waveform />
 						</div>
 

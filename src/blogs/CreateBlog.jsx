@@ -209,7 +209,7 @@ const CreateBlog = () => {
 					<input
 						type="text"
 						placeholder="Post Title"
-						className="w-full text-3xl font-bold text-gray-800 placeholder-gray-300 border-none focus:ring-0 focus:outline-none bg-transparent mb-4"
+						className="w-5xl text-3xl font-bold text-gray-800 placeholder-gray-300 border-none focus:ring-0 focus:outline-none bg-transparent mb-4"
 						value={title}
 						onChange={(e) => setTitle(e.target.value)}
 					/>

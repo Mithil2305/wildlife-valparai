@@ -6,12 +6,8 @@ import {
 	getDoc,
 	onAuthStateChanged,
 } from "../services/firebase.js";
-import {
-	getCreatorPosts,
-	getPresignedUrl,
-	uploadFileToR2,
-	deleteBlogPost, // Import delete function
-} from "../services/uploadPost.js";
+import { getCreatorPosts, deleteBlogPost } from "../services/uploadPost.js";
+import { uploadSingleFile } from "../services/r2Upload.js"; // ✅ NEW IMPORT
 import { updateUserProfile } from "../services/authApi.js";
 import LoadingSpinner from "./LoadingSpinner.jsx";
 import {
@@ -22,9 +18,9 @@ import {
 	FaComment,
 	FaTimes,
 	FaUpload,
-	FaPlus, // Import Plus icon
-	FaTrash, // Import Trash icon
-	FaEye, // Import Eye icon
+	FaPlus,
+	FaTrash,
+	FaEye,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -105,13 +101,15 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 		try {
 			let newPhotoUrl = user.profilePhotoUrl;
 
-			// Step 1: If a new image was selected, upload it
+			// ✅ UPDATED: Use new R2 upload method
 			if (profileImageFile) {
-				const filename = `${auth.currentUser.uid}-profile-${profileImageFile.name}`;
-				const presignedUrl = await getPresignedUrl(filename);
-				await uploadFileToR2(presignedUrl, profileImageFile);
-				newPhotoUrl =
-					new URL(presignedUrl).origin + new URL(presignedUrl).pathname;
+				console.log("Uploading profile photo to R2...");
+				newPhotoUrl = await uploadSingleFile(
+					profileImageFile,
+					auth.currentUser.uid,
+					"profile"
+				);
+				console.log("Profile photo uploaded:", newPhotoUrl);
 			}
 
 			// Step 2: Update the user document in Firestore
@@ -123,14 +121,14 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 			await updateUserProfile(auth.currentUser.uid, updatedData);
 
 			// Step 3: Update parent state and close modal
-			onSave(updatedData); // This updates the profile page in real-time
+			onSave(updatedData);
 			toast.dismiss();
 			toast.success("Profile updated successfully!");
 			onClose();
 		} catch (error) {
 			console.error("Error saving profile:", error);
 			toast.dismiss();
-			toast.error("Failed to update profile.");
+			toast.error("Failed to update profile: " + error.message);
 		} finally {
 			setIsUploading(false);
 		}
@@ -149,7 +147,7 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 				animate={{ y: 0, opacity: 1 }}
 				exit={{ y: -50, opacity: 0 }}
 				className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6"
-				onClick={(e) => e.stopPropagation()} // Prevent closing on modal click
+				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex justify-between items-center mb-4">
 					<h2 className="text-xl font-bold text-gray-900">Edit Profile</h2>
@@ -187,9 +185,12 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 							type="file"
 							ref={fileInputRef}
 							onChange={handleImageChange}
-							accept="image/png, image/jpeg"
+							accept="image/png, image/jpeg, image/jpg, image/webp"
 							className="hidden"
 						/>
+						<p className="text-xs text-gray-500 mt-2">
+							Click camera to upload new photo
+						</p>
 					</div>
 
 					{/* Name Field */}
@@ -233,7 +234,7 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 							type="button"
 							onClick={onClose}
 							disabled={isUploading}
-							className="py-2 px-5 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-all"
+							className="py-2 px-5 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-all disabled:opacity-50"
 						>
 							Cancel
 						</button>
@@ -418,7 +419,7 @@ const Profile = () => {
 									variants={gridItemVariants}
 									icon={<FaUpload className="w-5 h-5 text-white" />}
 									title="Points"
-									value={user.points}
+									value={user.points || 0}
 									color="bg-purple-500"
 								/>
 							</div>
