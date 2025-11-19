@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import { getAllPosts } from "../services/socialApi.js";
 import { getLatestPosts } from "../services/uploadPost.js";
 import Leaderboard from "./Leaderboard.jsx";
 import AdContainer from "./AdContainer.jsx";
@@ -10,47 +9,40 @@ import PopularPosts from "./PopularPosts.jsx";
 import LoadingSpinner from "./LoadingSpinner.jsx";
 
 const Home = () => {
-	const [allPosts, setAllPosts] = useState([]);
-	const [latestPosts, setLatestPosts] = useState([]);
+	const [blogPosts, setBlogPosts] = useState([]);
+	const [latestBlogs, setLatestBlogs] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [latestIndex, setLatestIndex] = useState(0);
 	const [displayCount, setDisplayCount] = useState(5);
 
 	useEffect(() => {
-		fetchAllData();
+		fetchBlogPosts();
 	}, []);
 
-	const fetchAllData = async () => {
+	const fetchBlogPosts = async () => {
 		try {
 			setLoading(true);
-			// Fetch both blog posts and social posts
-			const [blogPosts, socialPosts] = await Promise.all([
-				getLatestPosts(20), // Get latest 20 blog posts
-				getAllPosts(), // Get all social posts
-			]);
+			// Fetch all latest posts
+			const allPosts = await getLatestPosts(50);
 
-			// Combine and sort by creation date
-			const combined = [...blogPosts, ...socialPosts].sort((a, b) => {
-				const timeA = a.createdAt?.toMillis() || 0;
-				const timeB = b.createdAt?.toMillis() || 0;
-				return timeB - timeA;
-			});
+			// Filter ONLY blog type posts
+			const onlyBlogs = allPosts.filter((post) => post.type === "blog");
 
-			setAllPosts(combined);
-			setLatestPosts(combined.slice(0, 5)); // Latest 5 for carousel
+			setBlogPosts(onlyBlogs);
+			setLatestBlogs(onlyBlogs.slice(0, 5)); // Latest 5 blogs for carousel
 		} catch (error) {
-			console.error("Error fetching posts:", error);
+			console.error("Error fetching blog posts:", error);
 		} finally {
 			setLoading(false);
 		}
 	};
 
 	const nextLatest = () => {
-		setLatestIndex((prev) => (prev === latestPosts.length - 1 ? 0 : prev + 1));
+		setLatestIndex((prev) => (prev === latestBlogs.length - 1 ? 0 : prev + 1));
 	};
 
 	const prevLatest = () => {
-		setLatestIndex((prev) => (prev === 0 ? latestPosts.length - 1 : prev - 1));
+		setLatestIndex((prev) => (prev === 0 ? latestBlogs.length - 1 : prev - 1));
 	};
 
 	const loadMore = () => {
@@ -61,9 +53,9 @@ const Home = () => {
 		return <LoadingSpinner />;
 	}
 
-	// Get breaking news (most liked post from last 7 days)
+	// Get breaking news (most liked blog post from last 7 days)
 	const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-	const breakingNews = allPosts
+	const breakingNews = blogPosts
 		.filter((post) => (post.createdAt?.toMillis() || 0) > sevenDaysAgo)
 		.sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))[0];
 
@@ -80,7 +72,7 @@ const Home = () => {
 			)}
 
 			{/* Latest on Wildlife Section (Carousel) */}
-			{latestPosts.length > 0 && (
+			{latestBlogs.length > 0 && (
 				<section className="mb-8">
 					<div className="flex justify-between items-center mb-4">
 						<h2 className="text-2xl font-bold text-gray-900">
@@ -103,7 +95,7 @@ const Home = () => {
 							</button>
 						</div>
 					</div>
-					<BlogCard post={latestPosts[latestIndex]} />
+					<BlogCard post={latestBlogs[latestIndex]} />
 				</section>
 			)}
 
@@ -114,14 +106,14 @@ const Home = () => {
 					<h2 className="text-2xl font-bold text-gray-900 mb-4">
 						Top picks of the Day!
 					</h2>
-					{allPosts.length > 0 ? (
+					{blogPosts.length > 0 ? (
 						<>
-							{allPosts.slice(0, displayCount).map((post) => (
+							{blogPosts.slice(0, displayCount).map((post) => (
 								<BlogCard key={post.id} post={post} />
 							))}
 
 							{/* Load More Button */}
-							{displayCount < allPosts.length && (
+							{displayCount < blogPosts.length && (
 								<div className="text-center pt-4">
 									<button
 										onClick={loadMore}
@@ -135,7 +127,7 @@ const Home = () => {
 					) : (
 						<div className="text-center py-12">
 							<p className="text-gray-500 text-lg">
-								No posts available yet. Be the first to create one!
+								No blog posts available yet. Be the first to create one!
 							</p>
 						</div>
 					)}
@@ -144,7 +136,7 @@ const Home = () => {
 				{/* Right Column: Sidebar */}
 				<aside className="md:col-span-1 lg:col-span-1 space-y-8">
 					<Leaderboard />
-					<PopularPosts posts={allPosts} />
+					<PopularPosts posts={blogPosts} />
 					<AdContainer />
 					<AdContainer />
 				</aside>

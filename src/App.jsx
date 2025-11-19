@@ -51,6 +51,7 @@ import PaymentHistory from "./payments/PaymentHistory.jsx";
 
 // --- Auth Services ---
 import { auth, onAuthStateChanged } from "./services/firebase.js";
+import Favorites from "./socials/Favorites.jsx";
 
 /**
  * A wrapper for routes that require a user to be logged in.
@@ -89,7 +90,7 @@ const App = () => {
 			<Toaster position="top-center" reverseOrder={false} />{" "}
 			{/* Add Toaster here */}
 			<Navbar />
-			<div className="flex-grow">
+			<div className="grow">
 				<Routes>
 					{/* --- Public Routes --- */}
 					<Route path="/" element={<Home />} />
@@ -108,6 +109,7 @@ const App = () => {
 
 					{/* Socials Routes */}
 					<Route path="/socials" element={<Socials />} />
+					<Route path="/socials/favorites" element={<Favorites />} />
 
 					{/* Legal Routes */}
 					<Route path="/legal/disclaimer" element={<Disclaimer />} />
@@ -127,8 +129,7 @@ const App = () => {
 						<Route path="/points" element={<Points />} />
 						<Route path="/points/history" element={<PointsHistory />} />
 						<Route path="/payments/history" element={<PaymentHistory />} />
-						{/* Admin Dashboard (TODO: Add admin role check) */}
-						{/* This just checks for login, you'd add another check for admin role */}
+						{/* Admin Dashboard & Actions */}
 						<Route path="/dashboard/admin" element={<AdminDashboard />} />
 						<Route path="/admin/payments" element={<AdminPayments />} />
 					</Route>

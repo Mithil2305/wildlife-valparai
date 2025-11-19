@@ -13,7 +13,9 @@ import {
 	deleteDoc,
 	db,
 	setDoc,
+	doc,
 } from "./firebase.js";
+import { awardLikePoints, awardSharePoints } from "./points.js";
 
 /**
  * Fetches all posts (both photoAudio and blog types).
@@ -40,6 +42,7 @@ export const getAllPosts = async () => {
 
 /**
  * Toggles a like on a post.
+ * Awards points to both liker and post creator.
  * @param {string} postId - The ID of the post.
  * @param {string} userId - The ID of the user.
  * @param {string} username - The username of the user.
@@ -51,6 +54,14 @@ export const toggleLike = async (postId, userId, username) => {
 
 	try {
 		let isLiked = false;
+		let postCreatorId = null;
+
+		// Get post data first
+		const postSnap = await getDoc(postRef);
+		if (!postSnap.exists()) {
+			throw new Error("Post not found");
+		}
+		postCreatorId = postSnap.data().creatorId;
 
 		await runTransaction(db, async (transaction) => {
 			const likeSnap = await transaction.get(likeRef);
@@ -76,6 +87,15 @@ export const toggleLike = async (postId, userId, username) => {
 			}
 		});
 
+		// Award points if liked (outside transaction)
+		if (isLiked && postCreatorId) {
+			try {
+				await awardLikePoints(postCreatorId, userId, postId);
+			} catch (error) {
+				console.error("Error awarding like points:", error);
+			}
+		}
+
 		return isLiked;
 	} catch (error) {
 		console.error("Error toggling like:", error);
@@ -97,6 +117,42 @@ export const getUserLikeStatus = async (postId, userId) => {
 	} catch (error) {
 		console.error("Error checking like status:", error);
 		return false;
+	}
+};
+
+/**
+ * Records a share and awards points
+ * @param {string} postId - The ID of the post
+ * @param {string} userId - The ID of the user sharing
+ * @returns {Promise<void>}
+ */
+export const recordShare = async (postId, userId) => {
+	try {
+		const postRef = postDoc(postId);
+		const postSnap = await getDoc(postRef);
+
+		if (!postSnap.exists()) {
+			throw new Error("Post not found");
+		}
+
+		const postData = postSnap.data();
+
+		// Increment share count
+		await runTransaction(db, async (transaction) => {
+			transaction.update(postRef, {
+				shareCount: increment(1),
+			});
+		});
+
+		// Award points for sharing
+		try {
+			await awardSharePoints(postData.creatorId, userId, postId);
+		} catch (error) {
+			console.error("Error awarding share points:", error);
+		}
+	} catch (error) {
+		console.error("Error recording share:", error);
+		throw error;
 	}
 };
 
@@ -126,6 +182,35 @@ export const getPostLikes = async (postId) => {
 		return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 	} catch (error) {
 		console.error("Error fetching likes:", error);
+		throw error;
+	}
+};
+
+/**
+ * Get all posts liked by a specific user
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>} Array of liked posts
+ */
+export const getUserLikedPosts = async (userId) => {
+	try {
+		// Get all posts
+		const allPosts = await getAllPosts();
+
+		// Filter posts where user has liked
+		const likedPosts = [];
+
+		for (const post of allPosts) {
+			const likeRef = doc(db, "posts", post.id, "likes", userId);
+			const likeSnap = await getDoc(likeRef);
+
+			if (likeSnap.exists()) {
+				likedPosts.push(post);
+			}
+		}
+
+		return likedPosts;
+	} catch (error) {
+		console.error("Error fetching liked posts:", error);
 		throw error;
 	}
 };

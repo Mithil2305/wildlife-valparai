@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { getPost, getLatestPosts } from "../services/uploadPost.js";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import Comments from "./Comments.jsx";
@@ -11,50 +11,42 @@ import BlogCard from "../components/BlogCard.jsx";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import toast from "react-hot-toast";
 
-// New Component: Renders blog content and replaces YouTube links with embeds
+// Component to render blog content with HTML and YouTube embeds
 const PostContent = ({ content }) => {
-	// Simple regex to find YouTube URLs
+	if (!content) return null;
+
+	// Replace YouTube URLs with embeds
 	const youtubeRegex =
 		/(https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11}))/g;
 
-	// Split content by YouTube URLs
-	const parts = content.split(youtubeRegex);
+	let processedContent = content;
+
+	// Find all YouTube URLs and replace with iframe embeds
+	processedContent = processedContent.replace(youtubeRegex, (match) => {
+		const videoId = match.includes("v=")
+			? match.split("v=")[1]?.substring(0, 11)
+			: match.split("youtu.be/")[1]?.substring(0, 11);
+
+		if (videoId) {
+			return `<div class="relative w-full overflow-hidden rounded-lg shadow-lg my-6" style="padding-top: 56.25%;">
+				<iframe 
+					class="absolute top-0 left-0 w-full h-full" 
+					src="https://www.youtube.com/embed/${videoId}" 
+					title="YouTube video player" 
+					frameborder="0" 
+					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+					allowfullscreen>
+				</iframe>
+			</div>`;
+		}
+		return match;
+	});
 
 	return (
 		<div
-			className="prose prose-lg max-w-none text-gray-800"
-			style={{ whiteSpace: "pre-wrap" }}
-		>
-			{parts.map((part, index) => {
-				if (youtubeRegex.test(part)) {
-					// It's a YouTube URL, extract the video ID
-					const videoId = part.split("v=")[1] || part.split("youtu.be/")[1];
-					if (videoId) {
-						return (
-							<div
-								key={index}
-								className="relative w-full overflow-hidden rounded-lg shadow-lg my-6"
-								style={{ paddingTop: "56.25%" }} // 16:9 Aspect Ratio
-							>
-								<iframe
-									className="absolute top-0 left-0 w-full h-full"
-									src={`https://www.youtube.com/embed/${videoId.substring(
-										0,
-										11
-									)}`}
-									title="YouTube video player"
-									frameBorder="0"
-									allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-									allowFullScreen
-								></iframe>
-							</div>
-						);
-					}
-				}
-				// It's regular text
-				return <span key={index}>{part}</span>;
-			})}
-		</div>
+			className="prose prose-lg max-w-none text-gray-800 leading-relaxed"
+			dangerouslySetInnerHTML={{ __html: processedContent }}
+		/>
 	);
 };
 
@@ -62,8 +54,9 @@ const BlogDetail = () => {
 	const [post, setPost] = useState(null);
 	const [latestPosts, setLatestPosts] = useState([]);
 	const [loading, setLoading] = useState(true);
+	const [currentIndex, setCurrentIndex] = useState(0);
 	const { postId } = useParams();
-	const postUrl = window.location.href; // For social sharing
+	const postUrl = window.location.href;
 
 	useEffect(() => {
 		const fetchPost = async () => {
@@ -72,12 +65,16 @@ const BlogDetail = () => {
 				const postData = await getPost(postId);
 				setPost(postData);
 
-				// Fetch latest posts for the bottom section
-				const latestData = await getLatestPosts(3);
-				// Filter out the current post
-				setLatestPosts(latestData.filter((p) => p.id !== postId).slice(0, 2));
+				// Fetch latest posts for the carousel
+				const latestData = await getLatestPosts(10);
+				// Filter out current post and only get blogs
+				const filteredLatest = latestData
+					.filter((p) => p.id !== postId && p.type === "blog")
+					.slice(0, 3);
+				setLatestPosts(filteredLatest);
 			} catch (err) {
-				toast.error("Could not load post.", err);
+				console.error("Error loading post:", err);
+				toast.error("Could not load post.");
 			}
 			setLoading(false);
 		};
@@ -85,6 +82,14 @@ const BlogDetail = () => {
 			fetchPost();
 		}
 	}, [postId]);
+
+	const nextPost = () => {
+		setCurrentIndex((prev) => (prev === latestPosts.length - 1 ? 0 : prev + 1));
+	};
+
+	const prevPost = () => {
+		setCurrentIndex((prev) => (prev === 0 ? latestPosts.length - 1 : prev - 1));
+	};
 
 	if (loading) {
 		return <LoadingSpinner />;
@@ -94,100 +99,84 @@ const BlogDetail = () => {
 		return <NotFound />;
 	}
 
+	const formattedDate = post.createdAt
+		? new Date(post.createdAt.toDate()).toLocaleDateString("en-US", {
+				year: "numeric",
+				month: "long",
+				day: "numeric",
+		  })
+		: "Unknown date";
+
 	return (
 		<div className="bg-white py-12 px-4">
 			<div className="container mx-auto max-w-7xl">
-				{/* Two-column grid */}
-				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-					{/* Main Content Column */}
-					<main className="lg:col-span-2">
-						<article>
-							{/* Post Header */}
-							<header className="mb-6">
-								<h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
-									{post.title}
-								</h1>
-							</header>
+				<div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+					{/* Main Content Area */}
+					<main className="lg:col-span-3">
+						{/* Blog Header */}
+						<article className="bg-white rounded-lg">
+							<h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
+								{post.title || "Untitled Post"}
+							</h1>
 
-							{/* Main Image */}
-							{post.type === "blog" && post.photoUrl && (
-								<img
-									src={post.photoUrl}
-									alt={post.title}
-									className="w-full h-auto rounded-lg shadow-lg mb-6"
-								/>
-							)}
-							{post.type === "photoAudio" && (
-								<img
-									src={
-										post.photoUrl ||
-										"https://placehold.co/600x400/335833/FFF?text=Post+Image"
-									}
-									alt={post.title}
-									className="w-full h-auto rounded-lg shadow-lg mb-6"
-								/>
-							)}
-
-							{/* Post Content & Video */}
-							{post.type === "blog" ? (
-								<PostContent content={post.blogContent} />
-							) : (
-								<p className="prose prose-lg max-w-none text-gray-800">
-									{post.blogContent}
-								</p>
-							)}
-
-							{/* Audio Player (for photoAudio) */}
-							{post.type === "photoAudio" && post.audioUrl && (
-								<audio controls src={post.audioUrl} className="w-full mt-6">
-									Your browser does not support the audio element.
-								</audio>
-							)}
+							{/* Meta Info */}
+							<div className="flex items-center text-sm text-gray-600 mb-6 pb-6 border-b border-gray-200">
+								<span>By {post.creatorUsername || "Anonymous"}</span>
+								<span className="mx-2">•</span>
+								<span>{formattedDate}</span>
+							</div>
 
 							{/* Social Share Buttons */}
-							<SocialShareButtons url={postUrl} title={post.title} />
+							<SocialShareButtons
+								url={postUrl}
+								title={post.title || "Check out this post"}
+							/>
 
-							{/* Comments Section */}
-							<Comments postId={postId} />
+							{/* Blog Content */}
+							<div className="mt-8">
+								<PostContent content={post.blogContent} />
+							</div>
 						</article>
+
+						{/* Comments Section */}
+						<Comments postId={postId} />
+
+						{/* Related Posts Section */}
+						{latestPosts.length > 0 && (
+							<div className="mt-12 pt-8 border-t border-gray-200">
+								<div className="flex justify-between items-center mb-6">
+									<h2 className="text-2xl font-bold text-gray-900">
+										Related Posts
+									</h2>
+									<div className="flex space-x-2">
+										<button
+											onClick={prevPost}
+											className="bg-gray-200 p-2 rounded-full hover:bg-gray-300 transition-colors"
+											aria-label="Previous"
+										>
+											<FaChevronLeft className="text-gray-700" />
+										</button>
+										<button
+											onClick={nextPost}
+											className="bg-gray-200 p-2 rounded-full hover:bg-gray-300 transition-colors"
+											aria-label="Next"
+										>
+											<FaChevronRight className="text-gray-700" />
+										</button>
+									</div>
+								</div>
+								<BlogCard post={latestPosts[currentIndex]} />
+							</div>
+						)}
 					</main>
 
-					{/* Sidebar Column */}
-					<aside className="lg:col-span-1 space-y-8">
-						<PopularPosts />
-						<AdContainer />
+					{/* Sidebar */}
+					<aside className="lg:col-span-1 space-y-6">
+						<PopularPosts posts={latestPosts} />
 						<AdContainer />
 						<AdContainer />
 					</aside>
 				</div>
-
-				{/* Latest on Wildlife (Bottom Section) */}
-				<section className="mt-16 pt-12 border-t border-gray-200">
-					<div className="flex justify-between items-center mb-6">
-						<h2 className="text-2xl font-bold text-gray-900">
-							Latest on Wildlife
-						</h2>
-						<div className="flex space-x-2">
-							<button
-								className="bg-gray-200 p-2 rounded-full hover:bg-gray-300 transition-colors"
-								aria-label="Previous"
-							>
-								<FaChevronLeft className="text-gray-700" />
-							</button>
-							<button
-								className="bg-gray-200 p-2 rounded-full hover:bg-gray-300 transition-colors"
-								aria-label="Next"
-							>
-								<FaChevronRight className="text-gray-700" />
-							</button>
-						</div>
-					</div>
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-						{latestPosts.map((latestPost) => (
-							<BlogCard key={latestPost.id} post={latestPost} />
-						))}
-					</div>
-				</section>
 			</div>
 		</div>
 	);

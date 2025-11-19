@@ -1,58 +1,90 @@
-import {  usersCollection, getDocs, query, where } from "./firebase.js";
+import { usersCollection, getDocs, query, orderBy, limit } from "./firebase.js";
 
 /**
- * Fetches and ranks creators for the leaderboard.
- * * As per instructions, this fetches all creators and sorts them
- * in memory to avoid Firestore 'orderBy' index requirements.
- * * @returns {Promise<Array<object>>} A sorted array of creator user objects.
+ * Cash prize distribution:
+ * 1st Place: ₹10,000
+ * 2nd Place: ₹7,500
+ * 3rd Place: ₹5,000
+ * 4th Place: ₹2,500
+ * Total: ₹25,000
  */
-export const getLeaderboard = async () => {
+
+export const PRIZES = {
+	1: { amount: 10000, label: "₹10,000" },
+	2: { amount: 7500, label: "₹7,500" },
+	3: { amount: 5000, label: "₹5,000" },
+	4: { amount: 2500, label: "₹2,500" },
+};
+
+/**
+ * Calculate leaderboard rankings based on total points
+ * @param {number} limitCount - Number of users to return (default: 100)
+ * @returns {Promise<Array>} Sorted array of users by points
+ */
+export const calculateLeaderboard = async (limitCount = 100) => {
 	try {
-		// 1. Query for all users who are creators
-		const q = query(usersCollection, where("accountType", "==", "creator"));
+		// Fetch all users sorted by points
+		const q = query(
+			usersCollection,
+			orderBy("points", "desc"),
+			limit(limitCount)
+		);
+
 		const snapshot = await getDocs(q);
 
-		const creators = [];
-		snapshot.forEach((doc) => {
-			creators.push({ id: doc.id, ...doc.data() });
+		const rankedUsers = [];
+		snapshot.forEach((doc, index) => {
+			const userData = doc.data();
+			rankedUsers.push({
+				userId: doc.id,
+				rank: index + 1,
+				name: userData.name,
+				username: userData.username,
+				points: userData.points || 0,
+				accountType: userData.accountType,
+				profilePhotoUrl: userData.profilePhotoUrl,
+				prize: PRIZES[index + 1] || null,
+			});
 		});
 
-		// 2. Sort the creators by points in memory (descending)
-		creators.sort((a, b) => (b.points || 0) - (a.points || 0));
-
-		return creators;
+		return rankedUsers;
 	} catch (error) {
-		console.error("Error fetching leaderboard data:", error);
-		throw error;
+		console.error("Error calculating leaderboard:", error);
+		return [];
 	}
 };
 
 /**
- * Fetches a specific user's rank and points.
- * @param {string} userId - The user's ID.
- * @returns {Promise<object>} An object with { user, rank }.
+ * Get user's rank and nearby competitors
+ * @param {string} userId - User ID
+ * @returns {Promise<object>} User rank info with nearby users
  */
-export const getUserRank = async (userId) => {
+export const getUserRankInfo = async (userId) => {
 	try {
-		// This is inefficient but necessary without a dedicated backend
-		// A better approach for scale would be a cloud function
-		// that maintains a separate "ranks" collection.
-
-		const leaderboard = await getLeaderboard();
-
-		const userIndex = leaderboard.findIndex((user) => user.id === userId);
+		const leaderboard = await calculateLeaderboard();
+		const userIndex = leaderboard.findIndex((u) => u.userId === userId);
 
 		if (userIndex === -1) {
-			// User is not a creator or not on the leaderboard
-			return { user: null, rank: -1 };
+			return {
+				rank: null,
+				user: null,
+				above: [],
+				below: [],
+			};
 		}
 
+		const user = leaderboard[userIndex];
+		const above = leaderboard.slice(Math.max(0, userIndex - 2), userIndex);
+		const below = leaderboard.slice(userIndex + 1, userIndex + 3);
+
 		return {
-			user: leaderboard[userIndex],
-			rank: userIndex + 1, // 1-based index
+			rank: user.rank,
+			user: user,
+			above: above,
+			below: below,
 		};
 	} catch (error) {
-		console.error("Error getting user rank:", error);
-		throw error;
+		console.error("Error getting user rank info:", error);
+		return null;
 	}
 };

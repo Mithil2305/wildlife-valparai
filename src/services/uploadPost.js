@@ -20,6 +20,11 @@ import {
 import { compressImage } from "./imageCompressor.js";
 import { compressAudio } from "./audioCompressor.js";
 import { uploadMediaToR2 } from "./r2Upload.js";
+import {
+	awardSocialPostPoints,
+	awardBlogPostPoints,
+	awardCommentPoints,
+} from "./points.js";
 
 /**
  * Creates a "photoAudio" post using Cloudflare R2.
@@ -67,10 +72,19 @@ export const createPhotoAudioPost = async (
 			blogContent: "",
 			likeCount: 0,
 			commentCount: 0,
+			shareCount: 0,
 		};
 
 		const docRef = await addDoc(postsCollection, newPostData);
 		console.log("Post created successfully with ID:", docRef.id);
+
+		// Award points for creating social post
+		try {
+			await awardSocialPostPoints(creatorId, docRef.id);
+		} catch (error) {
+			console.error("Error awarding points:", error);
+		}
+
 		return docRef;
 	} catch (error) {
 		console.error("Error creating photo/audio post:", error);
@@ -104,9 +118,18 @@ export const createBlogPost = async (
 			blogContent: blogContent,
 			likeCount: 0,
 			commentCount: 0,
+			shareCount: 0,
 		};
 
 		const docRef = await addDoc(postsCollection, newPostData);
+
+		// Award points for creating blog post
+		try {
+			await awardBlogPostPoints(creatorId, docRef.id);
+		} catch (error) {
+			console.error("Error awarding points:", error);
+		}
+
 		return docRef;
 	} catch (error) {
 		console.error("Error creating blog post:", error);
@@ -214,6 +237,7 @@ export const getPostComments = async (postId) => {
 
 /**
  * Adds a new comment to a post and increments the post's commentCount.
+ * Awards points to both commenter and post creator.
  * @param {string} postId - The ID of the post to comment on.
  * @param {string} userId - The UID of the user commenting.
  * @param {string} username - The username of the user.
@@ -225,6 +249,13 @@ export const addPostComment = async (postId, userId, username, text) => {
 	const newCommentRef = doc(commentsCollection(postId));
 
 	try {
+		// Get post data to find creator
+		const postSnap = await getDoc(postRef);
+		if (!postSnap.exists()) {
+			throw new Error("Post not found");
+		}
+		const postData = postSnap.data();
+
 		await runTransaction(db, async (transaction) => {
 			const newCommentData = {
 				userId: userId,
@@ -238,6 +269,13 @@ export const addPostComment = async (postId, userId, username, text) => {
 				commentCount: increment(1),
 			});
 		});
+
+		// Award points for commenting (outside transaction)
+		try {
+			await awardCommentPoints(postData.creatorId, userId, postId);
+		} catch (error) {
+			console.error("Error awarding comment points:", error);
+		}
 	} catch (error) {
 		console.error("Error adding comment:", error);
 		throw error;
