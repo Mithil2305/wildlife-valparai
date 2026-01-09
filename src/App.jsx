@@ -52,6 +52,7 @@ import PaymentHistory from "./payments/PaymentHistory.jsx";
 // --- Auth Services ---
 import { auth, onAuthStateChanged } from "./services/firebase.js";
 import Favorites from "./socials/Favorites.jsx";
+import LeaderboardPage from "./components/LeaderboardPage.jsx";
 
 /**
  * A wrapper for routes that require a user to be logged in.
@@ -98,7 +99,7 @@ const App = () => {
 					<Route path="/register" element={<Register />} />
 					<Route path="/about" element={<About />} />
 					<Route path="/contact" element={<Contact />} />
-					<Route path="/leaderboard" element={<Leaderboard />} />
+					<Route path="/leaderboard" element={<LeaderboardPage />} />
 					<Route path="/sponsor" element={<Sponsor />} />
 					<Route path="/donate" element={<Donation />} />
 

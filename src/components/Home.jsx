@@ -137,8 +137,8 @@ const Home = () => {
 				<aside className="md:col-span-1 lg:col-span-1 space-y-8">
 					<Leaderboard />
 					<PopularPosts posts={blogPosts} />
-					<AdContainer />
-					<AdContainer />
+					{/* <AdContainer />
+					<AdContainer /> */}
 				</aside>
 			</div>
 		</div>

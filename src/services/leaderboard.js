@@ -1,14 +1,8 @@
-import { usersCollection, getDocs, query, orderBy, limit } from "./firebase.js";
+import { usersCollection, getDocs, query } from "./firebase.js";
 
 /**
- * Cash prize distribution:
- * 1st Place: ₹10,000
- * 2nd Place: ₹7,500
- * 3rd Place: ₹5,000
- * 4th Place: ₹2,500
- * Total: ₹25,000
+ * Cash prize distribution
  */
-
 export const PRIZES = {
 	1: { amount: 10000, label: "₹10,000" },
 	2: { amount: 7500, label: "₹7,500" },
@@ -18,35 +12,43 @@ export const PRIZES = {
 
 /**
  * Calculate leaderboard rankings based on total points
- * @param {number} limitCount - Number of users to return (default: 100)
+ * NOTE: Uses Client-side sorting to be robust against missing Firestore indexes.
+ * @param {number} limitCount - Number of users to return
  * @returns {Promise<Array>} Sorted array of users by points
  */
 export const calculateLeaderboard = async (limitCount = 100) => {
 	try {
-		// Fetch all users sorted by points
-		const q = query(
-			usersCollection,
-			orderBy("points", "desc"),
-			limit(limitCount)
-		);
-
+		console.log("Fetching leaderboard data...");
+		// 1. Fetch all users
+		const q = query(usersCollection);
 		const snapshot = await getDocs(q);
 
-		const rankedUsers = [];
-		snapshot.forEach((doc, index) => {
+		console.log(`Fetched ${snapshot.size} users.`);
+
+		let allUsers = [];
+		snapshot.forEach((doc) => {
 			const userData = doc.data();
-			rankedUsers.push({
+			allUsers.push({
 				userId: doc.id,
-				rank: index + 1,
-				name: userData.name,
-				username: userData.username,
-				points: userData.points || 0,
-				accountType: userData.accountType,
-				profilePhotoUrl: userData.profilePhotoUrl,
-				prize: PRIZES[index + 1] || null,
+				name: userData.name || "Anonymous",
+				username: userData.username || "user",
+				points: Number(userData.points) || 0, // Ensure points is a number
+				accountType: userData.accountType || "viewer",
+				profilePhotoUrl: userData.profilePhotoUrl || null,
 			});
 		});
 
+		// 2. Sort users by points (Highest first) - Client Side
+		allUsers.sort((a, b) => b.points - a.points);
+
+		// 3. Apply limit and assign ranks/prizes
+		const rankedUsers = allUsers.slice(0, limitCount).map((user, index) => ({
+			...user,
+			rank: index + 1,
+			prize: PRIZES[index + 1] || null,
+		}));
+
+		console.log("Top 3 Users:", rankedUsers.slice(0, 3));
 		return rankedUsers;
 	} catch (error) {
 		console.error("Error calculating leaderboard:", error);
@@ -56,8 +58,6 @@ export const calculateLeaderboard = async (limitCount = 100) => {
 
 /**
  * Get user's rank and nearby competitors
- * @param {string} userId - User ID
- * @returns {Promise<object>} User rank info with nearby users
  */
 export const getUserRankInfo = async (userId) => {
 	try {

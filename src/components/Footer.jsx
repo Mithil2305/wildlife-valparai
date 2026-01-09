@@ -1,108 +1,218 @@
 import React from "react";
 import { Link } from "react-router-dom";
-/**
- * A placeholder for your "WV Wildlife Valparai" logo.
- * It mimics the text and structure shown in the image.
- */
-
-/**
- * FooterLink component for styling
- */
-const FooterLink = ({ to, children }) => (
-	<Link
-		to={to}
-		className="text-gray-300 hover:text-white transition-colors duration-200"
-	>
-		{children}
-	</Link>
-);
-
-/**
- * ExternalLink component for styling
- */
-const ExternalLink = ({ href, children }) => (
-	<a
-		href={href}
-		target="_blank"
-		rel="noopener noreferrer"
-		className="text-gray-300 hover:text-white transition-colors duration-200"
-	>
-		{children}
-	</a>
-);
+import {
+	Instagram,
+	Facebook,
+	Youtube,
+	MessageCircle,
+	Mail,
+	ArrowRight,
+	Heart,
+	Shield,
+	FileText,
+	AlertCircle,
+} from "lucide-react";
 
 const Footer = () => {
-	// Using the dark green from your navbar toggle: bg-[#335833]
+	const currentYear = new Date().getFullYear();
+
 	return (
-		<footer className="bg-[#335833] text-gray-200">
-			<div className="container mx-auto max-w-7xl px-4 md:px-6 py-12">
-				{/* Main Grid: 5 columns as seen in the image */}
-				<div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-					{/* Column 1: Logo */}
-					<div className="col-span-2 md:col-span-1">
-						<Link to="/" aria-label="Go to Homepage">
-							<img src="/assets/logo.png" alt="logo" />
+		<footer className="bg-[#1A331A] text-gray-300 font-sans border-t border-white/5 relative overflow-hidden">
+			{/* Decorative Background Elements */}
+			<div className="absolute top-0 right-0 w-96 h-96 bg-[#335833] rounded-full blur-[120px] opacity-20 pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
+			<div className="absolute bottom-0 left-0 w-64 h-64 bg-[#335833] rounded-full blur-[100px] opacity-10 pointer-events-none translate-y-1/2 -translate-x-1/2"></div>
+
+			<div className="container mx-auto max-w-7xl px-6 pt-16 pb-8 relative z-10">
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8 mb-16">
+					{/* 1. Brand & Newsletter (Span 4) */}
+					<div className="lg:col-span-4 ">
+						<Link to="/" className="inline-block">
+							<img
+								src="/assets/logo.png"
+								alt="Wildlife Valparai"
+								className="h-35 w-auto brightness-110"
+							/>
 						</Link>
+						<p className="text-gray-400 text-sm leading-relaxed max-w-sm">
+							Dedicated to protecting nature and preserving life in Valparai.
+							Join our community to stay updated with the latest sightings and
+							conservation efforts.
+						</p>
+
+						{/* Newsletter Input */}
+						<div className="relative max-w-sm mt-4">
+							<input
+								type="email"
+								placeholder="Enter your email"
+								className="w-full bg-white/5 border border-white/10 rounded-full py-3 pl-4 pr-12 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-[#4A7A4A] focus:ring-1 focus:ring-[#4A7A4A] transition-all"
+							/>
+							<button className="absolute right-1.5 top-1.5 p-1.5 bg-[#335833] hover:bg-[#3e6b3e] text-white rounded-full transition-colors shadow-sm">
+								<ArrowRight size={16} />
+							</button>
+						</div>
 					</div>
 
-					{/* Column 2: Docs */}
-					<div className="flex flex-col space-y-3">
-						<h3 className="font-semibold text-white text-lg">Docs</h3>
-						<FooterLink to="/legal/disclaimer">Disclaimer</FooterLink>
-						<FooterLink to="/legal/privacy">Privacy Policy</FooterLink>
-						<FooterLink to="/legal/terms">Terms and Conditions</FooterLink>
+					{/* 2. Explore (Span 2) */}
+					<div className="lg:col-span-2 lg:ml-auto">
+						<h3 className="font-bold text-white text-lg mb-6">Explore</h3>
+						<ul className="space-y-4">
+							<li>
+								<Link
+									to="/about"
+									className="text-gray-400 hover:text-[#8CBF8C] transition-colors inline-flex items-center gap-2 group"
+								>
+									<span className="w-1.5 h-1.5 rounded-full bg-gray-600 group-hover:bg-[#8CBF8C] transition-colors"></span>
+									About Us
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/socials"
+									className="text-gray-400 hover:text-[#8CBF8C] transition-colors inline-flex items-center gap-2 group"
+								>
+									<span className="w-1.5 h-1.5 rounded-full bg-gray-600 group-hover:bg-[#8CBF8C] transition-colors"></span>
+									Social Feed
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/leaderboard"
+									className="text-gray-400 hover:text-[#8CBF8C] transition-colors inline-flex items-center gap-2 group"
+								>
+									<span className="w-1.5 h-1.5 rounded-full bg-gray-600 group-hover:bg-[#8CBF8C] transition-colors"></span>
+									Leaderboard
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/sponsor"
+									className="text-gray-400 hover:text-[#8CBF8C] transition-colors inline-flex items-center gap-2 group"
+								>
+									<span className="w-1.5 h-1.5 rounded-full bg-gray-600 group-hover:bg-[#8CBF8C] transition-colors"></span>
+									Sponsors
+								</Link>
+							</li>
+						</ul>
 					</div>
 
-					{/* Column 3: Pages */}
-					<div className="flex flex-col space-y-3">
-						<h3 className="font-semibold text-white text-lg">Pages</h3>
-						<FooterLink to="/">Home</FooterLink>
-						<FooterLink to="/about">About</FooterLink>
-						<FooterLink to="/contact">Contact</FooterLink>
-						<FooterLink to="/socials">WV Socials</FooterLink>
-						<FooterLink to="/sponsor">Become Sponsor</FooterLink>
+					{/* 3. Legal Docs (Span 3) */}
+					<div className="lg:col-span-3 lg:pl-8">
+						<h3 className="font-bold text-white text-lg mb-6">Legal</h3>
+						<ul className="space-y-4">
+							<li>
+								<Link
+									to="/legal/privacy"
+									className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+								>
+									<Shield size={16} className="text-[#335833]" />
+									Privacy Policy
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/legal/terms"
+									className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+								>
+									<FileText size={16} className="text-[#335833]" />
+									Terms & Conditions
+								</Link>
+							</li>
+							<li>
+								<Link
+									to="/legal/disclaimer"
+									className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+								>
+									<AlertCircle size={16} className="text-[#335833]" />
+									Disclaimer
+								</Link>
+							</li>
+						</ul>
 					</div>
 
-					{/* Column 4: Social Media */}
-					<div className="flex flex-col space-y-3">
-						<h3 className="font-semibold text-white text-lg">Social Media</h3>
-						<ExternalLink href="https://www.instagram.com/wildlifevalparai">
-							Instagram
-						</ExternalLink>
-						<ExternalLink href="https://www.facebook.com/wildlifevalparai">
-							Facebook
-						</ExternalLink>
-						<ExternalLink href="https://www.youtube.com/wildlifevalparai">
-							YouTube
-						</ExternalLink>
-						<ExternalLink href="https://wa.me/your-number">
-							WhatsApp
-						</ExternalLink>
-					</div>
+					{/* 4. Contact & Socials (Span 3) */}
+					<div className="lg:col-span-3">
+						<h3 className="font-bold text-white text-lg mb-6">Connect</h3>
+						<div className="space-y-4">
+							<a
+								href="mailto:wildlife.valparai@gmail.com"
+								className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all group"
+							>
+								<div className="p-2 bg-[#335833]/20 text-[#8CBF8C] rounded-lg group-hover:scale-110 transition-transform">
+									<Mail size={18} />
+								</div>
+								<div>
+									<p className="text-xs text-gray-400">Found an issue?</p>
+									<p className="text-sm font-medium text-white group-hover:text-[#8CBF8C] transition-colors">
+										Email Support
+									</p>
+								</div>
+							</a>
 
-					{/* Column 5: Found a Issue! */}
-					<div className="flex flex-col space-y-3">
-						<h3 className="font-semibold text-white text-lg">Found a Issue!</h3>
-						<p className="text-gray-300">Report at</p>
-						<a
-							href="mailto:wildlife.valparai@gmail.com"
-							className="text-gray-300 hover:text-white transition-colors duration-200"
-						>
-							wildlife.valparai@gmail.com
-						</a>
+							{/* Social Icons Grid */}
+							<div className="flex items-center gap-3 mt-4">
+								<SocialIcon
+									href="https://www.instagram.com/wildlifevalparai"
+									icon={Instagram}
+									color="hover:text-pink-500 hover:bg-pink-500/10"
+								/>
+								<SocialIcon
+									href="https://www.facebook.com/wildlifevalparai"
+									icon={Facebook}
+									color="hover:text-blue-500 hover:bg-blue-500/10"
+								/>
+								<SocialIcon
+									href="https://www.youtube.com/wildlifevalparai"
+									icon={Youtube}
+									color="hover:text-red-500 hover:bg-red-500/10"
+								/>
+								<SocialIcon
+									href="https://wa.me/your-number"
+									icon={MessageCircle}
+									color="hover:text-green-500 hover:bg-green-500/10"
+								/>
+							</div>
+						</div>
 					</div>
 				</div>
 
-				{/* Bottom Copyright Bar */}
-				<div className="mt-5 pt-8 border-t border-gray-100/20 text-center md:text-right">
-					<p className="text-gray-400 text-sm">
-						© {new Date().getFullYear()} | Wildlife Valparai | All Rights
-						Reserved
+				{/* Bottom Bar */}
+				<div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+					<p>
+						© {currentYear}{" "}
+						<span className="text-white">Wildlife Valparai</span>. All Rights
+						Reserved.
 					</p>
+					<div className="flex items-center gap-1.5">
+						<span>Made with</span>
+						<Heart size={14} className="text-red-500 fill-red-500" />
+						<span>
+							by{" "}
+							<a
+								href="https://mudmedia.in"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-white font-medium"
+							>
+								Mud Media
+							</a>
+						</span>
+					</div>
 				</div>
 			</div>
 		</footer>
 	);
 };
+
+// Helper for Social Icons
+const SocialIcon = ({ href, icon: Icon, color }) => (
+	<a
+		href={href}
+		target="_blank"
+		rel="noopener noreferrer"
+		className={`w-10 h-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-gray-400 transition-all duration-300 hover:scale-110 ${color}`}
+	>
+		<Icon size={18} />
+	</a>
+);
 
 export default Footer;
