@@ -274,7 +274,7 @@ const Navbar = () => {
 						) : (
 							<Link
 								to="/login"
-								className="bg-gray-900 text-white text-xs font-bold px-6 py-2.5 rounded-full hover:bg-gray-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+								className="bg-[#335833] text-white text-xs font-bold px-6 py-2.5 rounded-full hover:bg-[#5b925b] transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
 							>
 								Join Community
 							</Link>

@@ -173,8 +173,8 @@ const BlogDetail = () => {
 					{/* Sidebar */}
 					<aside className="lg:col-span-1 space-y-6">
 						<PopularPosts posts={latestPosts} />
-						<AdContainer />
-						<AdContainer />
+						{/* <AdContainer />
+						<AdContainer /> */}
 					</aside>
 				</div>
 			</div>
