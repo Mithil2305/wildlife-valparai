@@ -28,6 +28,9 @@ export const calculateLeaderboard = async (limitCount = 100) => {
 		let allUsers = [];
 		snapshot.forEach((doc) => {
 			const userData = doc.data();
+			// Filter out 'admin' accounts immediately
+			if (userData.accountType === "admin") return;
+
 			allUsers.push({
 				userId: doc.id,
 				name: userData.name || "Anonymous",

@@ -67,6 +67,15 @@ const Footer = () => {
 							</li>
 							<li>
 								<Link
+									to="/contact"
+									className="text-gray-400 hover:text-[#8CBF8C] transition-colors inline-flex items-center gap-2 group"
+								>
+									<span className="w-1.5 h-1.5 rounded-full bg-gray-600 group-hover:bg-[#8CBF8C] transition-colors"></span>
+									Contact Us
+								</Link>
+							</li>
+							<li>
+								<Link
 									to="/socials"
 									className="text-gray-400 hover:text-[#8CBF8C] transition-colors inline-flex items-center gap-2 group"
 								>

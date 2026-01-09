@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { Link } from "react-router-dom";
+import { FaChevronRight, FaFire, FaLeaf } from "react-icons/fa";
 import { getLatestPosts } from "../services/uploadPost.js";
 import Leaderboard from "./Leaderboard.jsx";
 import AdContainer from "./AdContainer.jsx";
@@ -12,8 +13,7 @@ const Home = () => {
 	const [blogPosts, setBlogPosts] = useState([]);
 	const [latestBlogs, setLatestBlogs] = useState([]);
 	const [loading, setLoading] = useState(true);
-	const [latestIndex, setLatestIndex] = useState(0);
-	const [displayCount, setDisplayCount] = useState(5);
+	const [displayCount, setDisplayCount] = useState(6);
 
 	useEffect(() => {
 		fetchBlogPosts();
@@ -22,14 +22,11 @@ const Home = () => {
 	const fetchBlogPosts = async () => {
 		try {
 			setLoading(true);
-			// Fetch all latest posts
 			const allPosts = await getLatestPosts(50);
-
 			// Filter ONLY blog type posts
 			const onlyBlogs = allPosts.filter((post) => post.type === "blog");
-
 			setBlogPosts(onlyBlogs);
-			setLatestBlogs(onlyBlogs.slice(0, 5)); // Latest 5 blogs for carousel
+			setLatestBlogs(onlyBlogs.slice(0, 4)); // Get top 4 for features
 		} catch (error) {
 			console.error("Error fetching blog posts:", error);
 		} finally {
@@ -37,109 +34,134 @@ const Home = () => {
 		}
 	};
 
-	const nextLatest = () => {
-		setLatestIndex((prev) => (prev === latestBlogs.length - 1 ? 0 : prev + 1));
-	};
-
-	const prevLatest = () => {
-		setLatestIndex((prev) => (prev === 0 ? latestBlogs.length - 1 : prev - 1));
-	};
-
 	const loadMore = () => {
-		setDisplayCount((prev) => prev + 5);
+		setDisplayCount((prev) => prev + 6);
 	};
 
 	if (loading) {
 		return <LoadingSpinner />;
 	}
 
-	// Get breaking news (most liked blog post from last 7 days)
+	// Logic for "Breaking News" (Most liked recent post or first post)
 	const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-	const breakingNews = blogPosts
-		.filter((post) => (post.createdAt?.toMillis() || 0) > sevenDaysAgo)
-		.sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))[0];
+	const breakingNews =
+		blogPosts
+			.filter((post) => (post.createdAt?.toMillis() || 0) > sevenDaysAgo)
+			.sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))[0] ||
+		blogPosts[0];
+
+	// Filter out the breaking news item from the main feed to avoid duplicates
+	const mainFeedPosts = blogPosts.filter(
+		(post) => post.id !== breakingNews?.id
+	);
 
 	return (
-		<div className="container mx-auto max-w-7xl p-4 md:p-6 bg-white">
-			{/* Breaking News Section */}
+		<div className="min-h-screen bg-[#FAFAFA]">
+			{/* --- Hero / Breaking News Section --- */}
 			{breakingNews && (
-				<section className="mb-8">
-					<h2 className="text-2xl font-bold text-gray-900 mb-4">
-						Breaking News
-					</h2>
-					<BreakingNewsCard post={breakingNews} />
-				</section>
-			)}
-
-			{/* Latest on Wildlife Section (Carousel) */}
-			{latestBlogs.length > 0 && (
-				<section className="mb-8">
-					<div className="flex justify-between items-center mb-4">
-						<h2 className="text-2xl font-bold text-gray-900">
-							Latest on Wildlife
-						</h2>
-						<div className="flex space-x-2">
-							<button
-								onClick={prevLatest}
-								className="bg-gray-200 p-2 rounded-full hover:bg-gray-300 transition-colors"
-								aria-label="Previous"
-							>
-								<FaChevronLeft className="text-gray-700" />
-							</button>
-							<button
-								onClick={nextLatest}
-								className="bg-gray-200 p-2 rounded-full hover:bg-gray-300 transition-colors"
-								aria-label="Next"
-							>
-								<FaChevronRight className="text-gray-700" />
-							</button>
+				<section className="bg-white border-b border-gray-100 py-8 md:py-12">
+					<div className="container mx-auto max-w-7xl px-4 md:px-6">
+						<div className="flex items-center gap-2 mb-6">
+							<span className="bg-red-50 text-red-600 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 animate-pulse">
+								<FaFire /> BREAKING
+							</span>
+							<h2 className="text-gray-500 text-sm font-medium uppercase tracking-wide">
+								Top Story of the Week
+							</h2>
 						</div>
+						<BreakingNewsCard post={breakingNews} />
 					</div>
-					<BlogCard post={latestBlogs[latestIndex]} />
 				</section>
 			)}
 
-			{/* Main Content Grid */}
-			<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
-				{/* Left Column: Top Picks */}
-				<main className="md:col-span-2 lg:col-span-3 space-y-6">
-					<h2 className="text-2xl font-bold text-gray-900 mb-4">
-						Top picks of the Day!
-					</h2>
-					{blogPosts.length > 0 ? (
-						<>
-							{blogPosts.slice(0, displayCount).map((post) => (
-								<BlogCard key={post.id} post={post} />
-							))}
-
-							{/* Load More Button */}
-							{displayCount < blogPosts.length && (
-								<div className="text-center pt-4">
-									<button
-										onClick={loadMore}
-										className="bg-[#335833] text-white font-semibold py-2 px-6 rounded-lg hover:bg-opacity-90 transition-all shadow"
-									>
-										Load More
-									</button>
-								</div>
-							)}
-						</>
-					) : (
-						<div className="text-center py-12">
-							<p className="text-gray-500 text-lg">
-								No blog posts available yet. Be the first to create one!
-							</p>
+			<div className="container mx-auto max-w-7xl px-4 md:px-6 py-12">
+				<div className="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-12">
+					{/* --- Main Content Column (Left) --- */}
+					<main className="lg:col-span-8 space-y-10">
+						{/* Section Header */}
+						<div className="flex items-center justify-between border-b border-gray-200 pb-4">
+							<h2 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
+								Latest from the Wild
+							</h2>
 						</div>
-					)}
-				</main>
 
-				{/* Right Column: Sidebar */}
-				<aside className="md:col-span-1 lg:col-span-1 space-y-8">
-					<Leaderboard />
-					<PopularPosts posts={blogPosts} />
-					{/* <AdContainer />
-					<AdContainer /> */}
-				</aside>
+						{/* Blog Grid */}
+						{mainFeedPosts.length > 0 ? (
+							<>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-10">
+									{mainFeedPosts.slice(0, displayCount).map((post) => (
+										<BlogCard key={post.id} post={post} />
+									))}
+								</div>
+
+								{/* Load More Button */}
+								{displayCount < mainFeedPosts.length && (
+									<div className="pt-8 flex justify-center">
+										<button
+											onClick={loadMore}
+											className="group relative px-8 py-3 bg-white border-2 border-[#335833] text-[#335833] font-bold rounded-full overflow-hidden transition-all hover:bg-[#335833] hover:text-white"
+										>
+											<span className="relative z-10 flex items-center gap-2">
+												Load More Stories <FaChevronRight size={12} />
+											</span>
+										</button>
+									</div>
+								)}
+							</>
+						) : (
+							<div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
+								<div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+									<FaLeaf className="text-gray-300 text-2xl" />
+								</div>
+								<p className="text-gray-500 font-medium">
+									No stories published yet.
+								</p>
+								<Link
+									to="/upload/blog"
+									className="text-[#335833] font-bold hover:underline mt-2 inline-block"
+								>
+									Be the first to write one!
+								</Link>
+							</div>
+						)}
+					</main>
+
+					{/* --- Sidebar Column (Right) --- */}
+					<aside className="lg:col-span-4 space-y-8">
+						{/* Sticky Wrapper to keep sidebar in view */}
+						<div className="sticky top-24 space-y-8">
+							{/* Leaderboard Widget */}
+							<Leaderboard />
+
+							{/* Popular Posts Widget */}
+							<div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+								<PopularPosts posts={blogPosts} />
+							</div>
+
+							{/* Advertisement / Sponsor Slot */}
+							{/* <div className="space-y-6">
+								<AdContainer />
+							</div> */}
+
+							{/* Newsletter / CTA */}
+							<div className="bg-[#1A331A] rounded-2xl p-6 text-center text-white relative overflow-hidden">
+								<div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16"></div>
+								<h3 className="text-lg font-bold mb-2 relative z-10">
+									Join the Community
+								</h3>
+								<p className="text-gray-300 text-sm mb-4 relative z-10">
+									Share your wildlife moments and compete with others.
+								</p>
+								<Link
+									to="/register"
+									className="block w-full py-2 bg-white text-[#1A331A] font-bold rounded-lg hover:bg-gray-100 transition-colors relative z-10"
+								>
+									Get Started
+								</Link>
+							</div>
+						</div>
+					</aside>
+				</div>
 			</div>
 		</div>
 	);

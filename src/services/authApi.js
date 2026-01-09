@@ -26,6 +26,7 @@ import {
  * @param {string} accountType - "viewer" or "creator".
  * @param {string} phone - User's phone number.
  * @param {string} profilePhotoUrl - URL for profile photo.
+ * @param {string} upiId - User's UPI ID (optional).
  */
 const _createUserDocuments = async (
 	transaction,
@@ -35,7 +36,8 @@ const _createUserDocuments = async (
 	username,
 	accountType,
 	phone,
-	profilePhotoUrl
+	profilePhotoUrl,
+	upiId = ""
 ) => {
 	const newUserRef = userDoc(userId);
 	const newUsernameRef = usernameDoc(username);
@@ -51,6 +53,7 @@ const _createUserDocuments = async (
 		points: 0,
 		profilePhotoUrl: profilePhotoUrl || "", // Store photo URL
 		bio: "", // Default empty bio
+		upiId: upiId || "", // Store UPI ID
 	};
 	transaction.set(newUserRef, newUserProfile);
 
@@ -70,7 +73,8 @@ export const registerUser = async (
 	username,
 	name,
 	phone,
-	accountType
+	accountType,
+	upiId
 ) => {
 	const lowerCaseUsername = username.toLowerCase();
 	const newUsernameRef = usernameDoc(lowerCaseUsername);
@@ -102,7 +106,8 @@ export const registerUser = async (
 				lowerCaseUsername,
 				accountType,
 				phone,
-				"" // No profile photo on email signup
+				"", // No profile photo on email signup
+				upiId
 			);
 		});
 
@@ -232,7 +237,8 @@ export const signInWithGoogle = async () => {
 					uniqueUsername,
 					"viewer", // Default for Google sign-up
 					user.phoneNumber || "", // Get phone if available, else empty
-					photoURL
+					photoURL,
+					"" // UPI ID is empty for Google Sign-In initially
 				);
 			});
 		}

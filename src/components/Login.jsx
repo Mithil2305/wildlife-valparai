@@ -2,7 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
-import toast from "react-hot-toast"; // Import toast
+import {
+	HiMail,
+	HiLockClosed,
+	HiArrowRight,
+	HiFingerPrint,
+	HiLogin,
+} from "react-icons/hi";
+import toast from "react-hot-toast";
 
 // Import the login functions from your authApi service
 import { loginUser, signInWithGoogle } from "../services/authApi.js";
@@ -12,25 +19,19 @@ import { auth, onAuthStateChanged } from "../services/firebase.js";
 const Login = () => {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
-	const [error, setError] = useState(null); // Keep local error for inline message
+	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 
-	// Effect to redirect user if they are already logged in
 	useEffect(() => {
 		const unsubscribe = onAuthStateChanged(auth, (user) => {
 			if (user) {
-				// User is already logged in, redirect to homepage or dashboard
 				navigate("/");
 			}
 		});
-		// Cleanup subscription on unmount
 		return () => unsubscribe();
 	}, [navigate]);
 
-	/**
-	 * Handles the standard email/password login.
-	 */
 	const handleLogin = async (e) => {
 		e.preventDefault();
 		setLoading(true);
@@ -38,169 +39,195 @@ const Login = () => {
 		const loginPromise = loginUser(email, password);
 
 		toast.promise(loginPromise, {
-			loading: "Logging in...",
+			loading: "Accessing secure channel...",
 			success: () => {
 				setLoading(false);
-				navigate("/"); // Navigate on success
-				return <b>Successfully logged in!</b>;
+				navigate("/");
+				return <b>Welcome back!</b>;
 			},
 			error: (err) => {
 				const message = err.message.replace("Firebase: ", "");
-				setError(message); // Set inline error
+				setError(message);
 				setLoading(false);
-				return <b>Login failed:</b>; // Toast message
+				return <b>Authentication failed</b>;
 			},
 		});
 	};
 
-	/**
-	 * Handles the Google Sign-In popup.
-	 */
 	const handleGoogleLogin = async () => {
 		setLoading(true);
 		setError(null);
 		const googlePromise = signInWithGoogle();
 
 		toast.promise(googlePromise, {
-			loading: "Opening Google Sign-In...",
+			loading: "Connecting to Google...",
 			success: () => {
 				setLoading(false);
-				navigate("/"); // Navigate on success
+				navigate("/");
 				return <b>Successfully logged in!</b>;
 			},
 			error: (err) => {
 				const message = err.message.replace("Firebase: ", "");
-				setError(message); // Set inline error
+				setError(message);
 				setLoading(false);
-				return <b>Login failed.</b>; // Toast message
+				return <b>Login failed.</b>;
 			},
 		});
 	};
 
-	// Animation variants for the main card
-	const cardVariants = {
-		hidden: { opacity: 0, y: -20 },
-		visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-	};
-
-	// Animation variants for the buttons
-	const buttonVariants = {
-		hover: { scale: 1.03 },
-		tap: { scale: 0.98 },
-	};
-
 	return (
-		<section className="min-h-[calc(100vh-150px)] flex items-center justify-center bg-gray-50 p-4">
-			<motion.div
-				variants={cardVariants}
-				initial="hidden"
-				animate="visible"
-				className="w-full max-w-md p-8 bg-white rounded-xl shadow-xl space-y-6"
-			>
-				{/* Logo has been removed as requested */}
-				<h2 className="text-2xl font-semibold text-center text-gray-800">
-					Welcome Back
-				</h2>
+		<div className="min-h-screen bg-[#F3F4F6] flex items-center justify-center p-4 lg:p-8">
+			<div className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col lg:flex-row min-h-[600px]">
+				{/* --- Left Side: Visuals --- */}
+				<div className="hidden lg:flex lg:w-5/12 bg-[#335833] relative flex-col justify-between p-12 text-white overflow-hidden">
+					{/* Background Pattern */}
+					<div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+					<div className="absolute top-0 left-0 w-64 h-64 bg-[#4A7A4A] rounded-full blur-3xl -ml-20 -mt-20 opacity-50"></div>
+					<div className="absolute bottom-0 right-0 w-64 h-64 bg-[#1A331A] rounded-full blur-3xl -mr-20 -mb-20 opacity-50"></div>
 
-				{/* Error Message Display */}
-				{error && (
-					<p className="text-sm text-center text-red-600 bg-red-50 p-3 rounded-lg">
-						{error}
-					</p>
-				)}
-
-				{/* Login Form */}
-				<form onSubmit={handleLogin} className="space-y-4">
-					<div>
-						<label
-							htmlFor="email"
-							className="block text-sm font-medium text-gray-700"
-						>
-							Email Address
-						</label>
-						<input
-							id="email"
-							type="email"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
-							required
-							className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#335833] focus:border-[#335833]"
-							placeholder="you@example.com"
-						/>
+					<div className="relative z-10">
+						<div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center mb-6">
+							<HiFingerPrint size={24} className="text-green-300" />
+						</div>
+						<h2 className="text-4xl font-extrabold tracking-tight leading-tight mb-4">
+							Welcome <br />
+							<span className="text-green-300">Back.</span>
+						</h2>
+						<p className="text-green-100/80 text-lg leading-relaxed">
+							Your dashboard, stats, and community are waiting for you.
+						</p>
 					</div>
 
-					<div>
-						<label
-							htmlFor="password"
-							className="block text-sm font-medium text-gray-700"
-						>
-							Password
-						</label>
-						<input
-							id="password"
-							type="password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-							required
-							className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#335833] focus:border-[#335833]"
-							placeholder="••••••••"
-						/>
+					<div className="relative z-10 space-y-4">
+						<div className="p-4 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
+							<p className="text-sm font-medium text-green-100 italic">
+								"The clearest way into the Universe is through a forest
+								wilderness."
+							</p>
+							<p className="text-xs text-green-300 mt-2 font-bold uppercase tracking-widest">
+								— John Muir
+							</p>
+						</div>
 					</div>
-
-					<div className="text-right">
-						<Link
-							to="/forgot-password" // You'll need to create this route
-							className="text-sm font-medium text-[#335833] hover:underline"
-						>
-							Forgot Password?
-						</Link>
-					</div>
-
-					{/* Main Login Button */}
-					<motion.button
-						variants={buttonVariants}
-						whileHover="hover"
-						whileTap="tap"
-						type="submit"
-						disabled={loading}
-						className=" cursor-pointer w-full py-3 px-4 bg-[#335833] text-white font-semibold rounded-lg shadow-md hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-[#335833] focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						{loading ? "Logging in..." : "Login"}
-					</motion.button>
-				</form>
-
-				{/* "Or" Separator */}
-				<div className="flex items-center my-6">
-					<div className="flex-grow border-t border-gray-300"></div>
-					<span className="mx-4 text-sm font-medium text-gray-500">or</span>
-					<div className="flex-grow border-t border-gray-300"></div>
 				</div>
 
-				{/* Google Login Button */}
-				<motion.button
-					variants={buttonVariants}
-					whileHover="hover"
-					whileTap="tap"
-					onClick={handleGoogleLogin}
-					disabled={loading}
-					className="cursor-pointer w-full py-3 px-4 flex justify-center items-center gap-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-200"
-				>
-					<FcGoogle className="w-6 h-6" />
-					<span>Login with Google</span>
-				</motion.button>
+				{/* --- Right Side: Form --- */}
+				<div className="w-full lg:w-7/12 p-8 md:p-12 lg:p-16 flex flex-col justify-center">
+					<div className="max-w-md mx-auto w-full">
+						<div className="text-center mb-10">
+							<div className="inline-flex lg:hidden w-12 h-12 bg-[#335833] rounded-xl items-center justify-center mb-4 text-white shadow-lg shadow-green-900/20">
+								<HiLogin size={24} />
+							</div>
+							<h2 className="text-3xl font-bold text-gray-900">Sign In</h2>
+						</div>
 
-				{/* Sign Up Link */}
-				<p className="text-sm text-center text-gray-600">
-					Don't have an account yet?{" "}
-					<Link
-						to="/register"
-						className="font-medium text-[#335833] hover:underline"
-					>
-						Register an Account!
-					</Link>
-				</p>
-			</motion.div>
-		</section>
+						{error && (
+							<motion.div
+								initial={{ opacity: 0, y: -10 }}
+								animate={{ opacity: 1, y: 0 }}
+								className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium mb-6 flex items-center gap-2 border border-red-100"
+							>
+								<span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+								{error}
+							</motion.div>
+						)}
+
+						<form onSubmit={handleLogin} className="space-y-5">
+							<div>
+								<label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">
+									Email Address
+								</label>
+								<div className="relative group">
+									<HiMail
+										className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-[#335833] transition-colors"
+										size={18}
+									/>
+									<input
+										type="email"
+										value={email}
+										onChange={(e) => setEmail(e.target.value)}
+										required
+										placeholder="you@example.com"
+										className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#335833] focus:bg-white focus:border-[#335833] outline-none font-medium transition-all"
+									/>
+								</div>
+							</div>
+
+							<div>
+								<div className="flex justify-between items-center mb-1 ml-1">
+									<label className="block text-xs font-bold text-gray-500 uppercase">
+										Password
+									</label>
+									<Link
+										to="/forgot-password"
+										className="text-xs font-bold text-[#335833] hover:underline"
+									>
+										Forgot Password?
+									</Link>
+								</div>
+								<div className="relative group">
+									<HiLockClosed
+										className="absolute left-4 top-3.5 text-gray-400 group-focus-within:text-[#335833] transition-colors"
+										size={18}
+									/>
+									<input
+										type="password"
+										value={password}
+										onChange={(e) => setPassword(e.target.value)}
+										required
+										placeholder="••••••••"
+										className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#335833] focus:bg-white focus:border-[#335833] outline-none font-medium transition-all"
+									/>
+								</div>
+							</div>
+
+							<motion.button
+								whileHover={{ scale: 1.02 }}
+								whileTap={{ scale: 0.98 }}
+								type="submit"
+								disabled={loading}
+								className="w-full py-4 bg-[#335833] text-white font-bold rounded-xl shadow-lg hover:bg-[#2a4a2a] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+							>
+								{loading ? (
+									"Authenticating..."
+								) : (
+									<>
+										Sign In <HiArrowRight />
+									</>
+								)}
+							</motion.button>
+						</form>
+
+						<div className="relative flex py-8 items-center">
+							<div className="flex-grow border-t border-gray-200"></div>
+							<span className="flex-shrink-0 mx-4 text-gray-400 text-xs uppercase tracking-widest font-bold">
+								Or continue with
+							</span>
+							<div className="flex-grow border-t border-gray-200"></div>
+						</div>
+
+						<button
+							onClick={handleGoogleLogin}
+							disabled={loading}
+							className="w-full py-3 px-4 flex justify-center items-center gap-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+						>
+							<FcGoogle className="w-6 h-6" />
+							<span>Google Account</span>
+						</button>
+
+						<p className="text-center text-sm text-gray-500 mt-8">
+							New to the platform?{" "}
+							<Link
+								to="/register"
+								className="text-[#335833] font-bold hover:underline"
+							>
+								Create an Account
+							</Link>
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
 	);
 };
 

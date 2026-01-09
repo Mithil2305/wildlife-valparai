@@ -17,7 +17,6 @@ import Register from "./components/Register.jsx";
 import About from "./components/About.jsx";
 import Contact from "./components/Contact.jsx";
 import Sponsor from "./components/Sponsor.jsx";
-import Donation from "./components/Donation.jsx";
 
 // --- Legal Documents ---
 import Disclaimer from "./documents/Disclaimer.jsx";
@@ -53,6 +52,8 @@ import PaymentHistory from "./payments/PaymentHistory.jsx";
 import { auth, onAuthStateChanged } from "./services/firebase.js";
 import Favorites from "./socials/Favorites.jsx";
 import LeaderboardPage from "./components/LeaderboardPage.jsx";
+import Advertise from "./components/Advertise.jsx";
+// import CreateAdminTool from "./util/CreateAdminTool.jsx";
 
 /**
  * A wrapper for routes that require a user to be logged in.
@@ -101,7 +102,7 @@ const App = () => {
 					<Route path="/contact" element={<Contact />} />
 					<Route path="/leaderboard" element={<LeaderboardPage />} />
 					<Route path="/sponsor" element={<Sponsor />} />
-					<Route path="/donate" element={<Donation />} />
+					<Route path="/advertise" element={<Advertise />} />
 
 					{/* Blog Routes */}
 					<Route path="/blogs/manage" element={<ManageBlogs />} />
@@ -137,6 +138,7 @@ const App = () => {
 
 					{/* --- Not Found Route --- */}
 					<Route path="*" element={<NotFound />} />
+					{/* <Route path="/adminlogin" element={<CreateAdminTool />} /> */}
 				</Routes>
 			</div>
 			<Footer />
