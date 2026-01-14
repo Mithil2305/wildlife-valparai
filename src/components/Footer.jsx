@@ -160,17 +160,17 @@ const Footer = () => {
 							{/* Social Icons Grid */}
 							<div className="flex items-center gap-3 mt-4">
 								<SocialIcon
-									href="https://www.instagram.com/wildlifevalparai"
+									href="https://www.instagram.com/wildlife_valparai"
 									icon={Instagram}
 									color="hover:text-pink-500 hover:bg-pink-500/10"
 								/>
 								<SocialIcon
-									href="https://www.facebook.com/wildlifevalparai"
+									href="https://www.facebook.com/profile.php?id=100070562311839"
 									icon={Facebook}
 									color="hover:text-blue-500 hover:bg-blue-500/10"
 								/>
 								<SocialIcon
-									href="https://www.youtube.com/wildlifevalparai"
+									href="https://www.youtube.com/@wildlife.valparai"
 									icon={Youtube}
 									color="hover:text-red-500 hover:bg-red-500/10"
 								/>

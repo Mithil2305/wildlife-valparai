@@ -20,6 +20,7 @@ import { applyPoints } from "./points";
 export const createPhotoAudioPost = async ({
 	creatorId,
 	creatorUsername,
+	creatorProfilePhoto = "",
 	title,
 	photoUrl,
 	audioUrl,
@@ -28,6 +29,7 @@ export const createPhotoAudioPost = async ({
 		type: "photoAudio",
 		creatorId,
 		creatorUsername,
+		creatorProfilePhoto,
 		title,
 		photoUrl,
 		audioUrl,
@@ -37,6 +39,7 @@ export const createPhotoAudioPost = async ({
 export const createBlogPost = async ({
 	creatorId,
 	creatorUsername,
+	creatorProfilePhoto = "",
 	title,
 	blogContent,
 }) => {
@@ -44,6 +47,7 @@ export const createBlogPost = async ({
 		type: "blog",
 		creatorId,
 		creatorUsername,
+		creatorProfilePhoto,
 		title,
 		blogContent,
 	});
@@ -53,6 +57,7 @@ const createPost = async ({
 	type,
 	creatorId,
 	creatorUsername,
+	creatorProfilePhoto = "",
 	title,
 	photoUrl = "",
 	audioUrl = "",
@@ -64,6 +69,7 @@ const createPost = async ({
 		type,
 		creatorId,
 		creatorUsername,
+		creatorProfilePhoto,
 		title,
 		photoUrl,
 		audioUrl,

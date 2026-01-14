@@ -38,6 +38,7 @@ import ManageBlogs from "./blogs/ManageBlogs.jsx";
 import Socials from "./socials/Socials.jsx";
 import UploadContent from "./socials/UploadContent.jsx";
 import ManageSocial from "./socials/ManageSocial.jsx";
+import PostDetail from "./socials/PostDetail.jsx";
 
 // --- Dashboard Components ---
 import CreatorDashboard from "./dashboard/CreatorDashboard.jsx";
@@ -111,6 +112,7 @@ const App = () => {
 
 					{/* Socials Routes */}
 					<Route path="/socials" element={<Socials />} />
+					<Route path="/socials/:postId" element={<PostDetail />} />
 					<Route path="/socials/favorites" element={<Favorites />} />
 
 					{/* Legal Routes */}

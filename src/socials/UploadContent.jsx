@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../services/firebase.js";
+import { auth, userDoc, getDoc } from "../services/firebase.js";
 import { createPhotoAudioPost } from "../services/uploadPost.js";
+import { uploadMediaToR2 } from "../services/r2Upload.js";
 import toast from "react-hot-toast";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import { FaCloudUploadAlt, FaImage, FaMusic, FaTimes } from "react-icons/fa";
@@ -12,8 +13,27 @@ const UploadContent = () => {
 	const [title, setTitle] = useState("");
 	const [photoPreview, setPhotoPreview] = useState(null);
 	const [uploading, setUploading] = useState(false);
+	const [userData, setUserData] = useState(null);
 	const navigate = useNavigate();
 	const currentUser = auth.currentUser;
+
+	// Fetch user data from Firestore to get actual username and profile photo
+	useEffect(() => {
+		const fetchUserData = async () => {
+			if (currentUser) {
+				try {
+					const userRef = userDoc(currentUser.uid);
+					const userSnap = await getDoc(userRef);
+					if (userSnap.exists()) {
+						setUserData(userSnap.data());
+					}
+				} catch (error) {
+					console.error("Error fetching user data:", error);
+				}
+			}
+		};
+		fetchUserData();
+	}, [currentUser]);
 
 	const handlePhotoChange = (e) => {
 		const file = e.target.files[0];
@@ -64,16 +84,30 @@ const UploadContent = () => {
 			return;
 		}
 
+		if (!userData) {
+			toast.error("Unable to load user data. Please try again.");
+			return;
+		}
+
 		setUploading(true);
 
 		try {
-			await createPhotoAudioPost(
-				currentUser.uid,
-				currentUser.displayName || "Anonymous",
+			// First, upload files to R2 to get URLs
+			const { photoUrl, audioUrl } = await uploadMediaToR2(
 				photoFile,
 				audioFile,
-				title.trim()
+				currentUser.uid
 			);
+
+			// Then create the post with the URLs (use Firestore username, not Auth displayName)
+			await createPhotoAudioPost({
+				creatorId: currentUser.uid,
+				creatorUsername: userData.username || userData.name || "Anonymous",
+				creatorProfilePhoto: userData.profilePhotoUrl || null,
+				title: title.trim(),
+				photoUrl,
+				audioUrl,
+			});
 
 			toast.success("Content uploaded successfully!");
 			navigate("/socials");

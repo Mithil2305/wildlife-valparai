@@ -175,12 +175,13 @@ const CreateBlog = () => {
 		// We pass the HTML content directly.
 		// Note: In production, you should sanitize this HTML before displaying it
 		// to prevent XSS, although React usually escapes content unless dangerouslySetInnerHTML is used.
-		const blogPromise = createBlogPost(
-			auth.currentUser.uid,
-			user.username,
+		const blogPromise = createBlogPost({
+			creatorId: auth.currentUser.uid,
+			creatorUsername: user.username,
+			creatorProfilePhoto: user.profilePhotoUrl || "",
 			title,
-			content
-		);
+			blogContent: content,
+		});
 
 		toast.promise(blogPromise, {
 			loading: "Publishing post...",

@@ -230,9 +230,12 @@ const SocialCard = ({ post, onUpdate }) => {
 				<div className="flex items-center gap-3">
 					<div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-100">
 						<img
-							src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-								post.creatorUsername || "User"
-							)}&background=random`}
+							src={
+								post.creatorProfilePhoto ||
+								`https://ui-avatars.com/api/?name=${encodeURIComponent(
+									post.creatorUsername || "User"
+								)}&background=random`
+							}
 							alt={post.creatorUsername}
 							className="w-full h-full object-cover"
 						/>
