@@ -11,6 +11,7 @@ import {
 	getDoc,
 } from "../services/firebase";
 import { signOut } from "../services/authApi";
+import Leaderboard from "./Leaderboard";
 
 /**
  * ----------------------------------------------------------------
@@ -247,6 +248,14 @@ const Navbar = () => {
 								}
 							>
 								Sponsors
+							</NavLink>
+							<NavLink
+								to="/leaderboard"
+								className={({ isActive }) =>
+									isActive ? activeLink : inactiveLink
+								}
+							>
+								Leaderboard
 							</NavLink>
 						</div>
 
