@@ -8,7 +8,14 @@ import PopularPosts from "../components/PopularPosts.jsx";
 import AdContainer from "../components/AdContainer.jsx";
 import SocialShareButtons from "./SocialShareButtons.jsx";
 import BlogCard from "../components/BlogCard.jsx";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import {
+	FaChevronLeft,
+	FaChevronRight,
+	FaFacebookF,
+	FaInstagram,
+	FaWhatsapp,
+	FaYoutube,
+} from "react-icons/fa";
 import toast from "react-hot-toast";
 
 // Component to render blog content with HTML and YouTube embeds
@@ -83,6 +90,16 @@ const BlogDetail = () => {
 		}
 	}, [postId]);
 
+	const SocialLink = ({ icon: Icon, href, color }) => (
+		<a
+			href={href}
+			target="_blank"
+			rel="noopener noreferrer"
+			className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all duration-300 hover:scale-110 ${color}`}
+		>
+			<Icon size={20} />
+		</a>
+	);
 	const nextPost = () => {
 		setCurrentIndex((prev) => (prev === latestPosts.length - 1 ? 0 : prev + 1));
 	};
@@ -175,6 +192,37 @@ const BlogDetail = () => {
 						<PopularPosts posts={latestPosts} />
 						{/* <AdContainer />
 						<AdContainer /> */}
+						<div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+							{/* Social Media Links */}
+
+							<h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+								<span className="w-2 h-2 rounded-full bg-green-500"></span>
+								Follow Us
+							</h3>
+							<div className="flex flex-wrap gap-3">
+								<SocialLink
+									icon={FaInstagram}
+									href="https://www.instagram.com/wildlife_valparai"
+									color="text-pink-600 bg-pink-50 hover:bg-pink-100"
+								/>
+								<SocialLink
+									icon={FaFacebookF}
+									href="https://www.facebook.com/profile.php?id=100070562311839"
+									color="text-blue-600 bg-blue-50 hover:bg-blue-100"
+								/>
+								<SocialLink
+									icon={FaYoutube}
+									href="https://www.youtube.com/@wildlife.valparai"
+									color="text-red-600 bg-red-50 hover:bg-red-100"
+								/>
+
+								<SocialLink
+									icon={FaWhatsapp}
+									href="https://whatsapp.com"
+									color="text-green-600 bg-green-50 hover:bg-green-100"
+								/>
+							</div>
+						</div>
 					</aside>
 				</div>
 			</div>

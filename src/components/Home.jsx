@@ -166,24 +166,20 @@ const Home = () => {
 								<div className="flex flex-wrap gap-3">
 									<SocialLink
 										icon={FaInstagram}
-										href="https://instagram.com"
+										href="https://www.instagram.com/wildlife_valparai"
 										color="text-pink-600 bg-pink-50 hover:bg-pink-100"
 									/>
 									<SocialLink
 										icon={FaFacebookF}
-										href="https://facebook.com"
+										href="https://www.facebook.com/profile.php?id=100070562311839"
 										color="text-blue-600 bg-blue-50 hover:bg-blue-100"
 									/>
 									<SocialLink
 										icon={FaYoutube}
-										href="https://youtube.com"
+										href="https://www.youtube.com/@wildlife.valparai"
 										color="text-red-600 bg-red-50 hover:bg-red-100"
 									/>
-									<SocialLink
-										icon={FaTwitter}
-										href="https://twitter.com"
-										color="text-sky-500 bg-sky-50 hover:bg-sky-100"
-									/>
+
 									<SocialLink
 										icon={FaWhatsapp}
 										href="https://whatsapp.com"

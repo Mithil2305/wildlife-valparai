@@ -119,7 +119,7 @@ const Footer = () => {
 							</li>
 							<li>
 								<Link
-									to="/legal/terms"
+									to="/legal/terms-and-conditions"
 									className="text-gray-400 hover:text-white transition-colors flex items-center gap-2"
 								>
 									<FileText size={16} className="text-[#335833]" />

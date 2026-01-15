@@ -21,7 +21,7 @@ import Sponsor from "./components/Sponsor.jsx";
 // --- Legal Documents ---
 import Disclaimer from "./documents/Disclaimer.jsx";
 import PrivacyPolicy from "./documents/PrivacyPolicy.jsx";
-import TermsandConditions from "./documents/TermsandConditions.jsx";
+import TermsAndConditions from "./documents/TermsAndConditions.jsx";
 
 // --- Main Feature Components ---
 import Leaderboard from "./components/Leaderboard.jsx";
@@ -120,7 +120,10 @@ const App = () => {
 					{/* Legal Routes */}
 					<Route path="/legal/disclaimer" element={<Disclaimer />} />
 					<Route path="/legal/privacy" element={<PrivacyPolicy />} />
-					<Route path="/legal/terms" element={<TermsandConditions />} />
+					<Route
+						path="/legal/terms-and-conditions"
+						element={<TermsAndConditions />}
+					/>
 
 					{/* --- Protected Routes (Require Login) --- */}
 					<Route element={<ProtectedRoute user={currentUser} />}>
