@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { calculateLeaderboard, PRIZES } from "../services/leaderboard.js";
-import { auth } from "../services/firebase.js";
+import { getAuthInstance } from "../services/firebase.js";
 
 // --- CONFETTI UTILITY (Internal lightweight implementation) ---
 const fireConfetti = (x, y) => {
@@ -306,7 +306,8 @@ const Leaderboard = ({ showFull = false, timeFrame }) => {
 	const [prevRankings, setPrevRankings] = useState({});
 	const [loading, setLoading] = useState(true);
 	const [currentUserRank, setCurrentUserRank] = useState(null);
-	const currentUser = auth.currentUser;
+	const auth = getAuthInstance();
+	const currentUser = auth?.currentUser;
 
 	const updateRankings = (newRankings) => {
 		const prevMap = {};
@@ -529,7 +530,7 @@ const LeaderboardPage = () => {
 								<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
 								<span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
 							</span>
-							Live, auto-refreshing
+							Live
 						</div>
 						<h5 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
 							Community <span className="text-[#335833]">Leaderboard</span>
@@ -604,22 +605,6 @@ const LeaderboardPage = () => {
 									</div>
 								))}
 							</div>
-						</BentoBox>
-
-						<BentoBox
-							title="Quick Tips"
-							icon={User}
-							accentColor="text-blue-600"
-							iconBgClass="bg-blue-600/10"
-						>
-							<ul className="space-y-2 text-sm text-gray-600">
-								<li>🚀 Stay active weekly to hold your spot.</li>
-								<li>✨ Likes and comments both earn and can be reversed.</li>
-								<li>🔔 Shares only add points—no loss on removal.</li>
-								<li>
-									📈 Check the badge beside your name to see if you’re rising.
-								</li>
-							</ul>
 						</BentoBox>
 					</div>
 				</div>

@@ -32,67 +32,174 @@ import {
 } from "firebase/firestore";
 
 // --- 1. Firebase Configuration ---
-// This reads the VITE_ variables from your .env file
-const firebaseConfig = {
-	apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "test",
-	authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "test",
-	projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "test",
-	storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "test",
-	messagingSenderId:
-		import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "test",
-	appId: import.meta.env.VITE_FIREBASE_APP_ID || "test",
-	measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "test",
+// Get worker URL for fetching secure config
+const WORKER_URL = import.meta.env.VITE_WORKER_URL || "http://localhost:8787";
+
+// Firebase instances (will be initialized)
+let app = null;
+let auth = null;
+let db = null;
+let isInitialized = false;
+let initPromise = null;
+
+/**
+ * Fetch Firebase config from secure Cloudflare Worker
+ */
+const fetchFirebaseConfig = async () => {
+	try {
+		const response = await fetch(`${WORKER_URL}/config/firebase`, {
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to fetch config: ${response.status}`);
+		}
+
+		return await response.json();
+	} catch (error) {
+		console.error("Error fetching Firebase config from worker:", error);
+		throw error;
+	}
 };
 
-// --- 2. Initialize Firebase ---
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-setLogLevel("Debug"); // Enable debug logging
+/**
+ * Initialize Firebase with config from secure worker
+ * This must be called before using any Firebase services
+ */
+const initializeFirebase = async () => {
+	if (isInitialized) return { app, auth, db };
+	if (initPromise) return initPromise;
 
-// --- 3. Firestore Collection References (as per wv-overview.pdf) ---
-// These are now corrected to be root-level collections, matching your firestore.rules
+	initPromise = (async () => {
+		try {
+			console.log("Fetching Firebase config from worker...");
+			const firebaseConfig = await fetchFirebaseConfig();
 
-// /users [cite: 132-156]
-const usersCollection = collection(db, "users");
-const userDoc = (userId) => doc(db, "users", userId);
+			app = initializeApp(firebaseConfig);
+			auth = getAuth(app);
+			db = getFirestore(app);
+			isInitialized = true;
 
-// /users/{userId}/pointsHistory [cite: 132-134]
-const pointsHistoryCollection = (userId) =>
-	collection(db, "users", userId, "pointsHistory");
+			setLogLevel("Debug");
+			console.log("Firebase initialized successfully with secure config");
 
-// /users/{userId}/transactionsReceived [cite: 135-136]
-const transactionsReceivedCollection = (userId) =>
-	collection(db, "users", userId, "transactionsReceived");
+			return { app, auth, db };
+		} catch (error) {
+			console.error("Failed to initialize Firebase:", error);
+			initPromise = null;
+			throw error;
+		}
+	})();
 
-// /posts [cite: 137-140]
-const postsCollection = collection(db, "posts");
-const postDoc = (postId) => doc(db, "posts", postId);
+	return initPromise;
+};
 
-// /posts/{postId}/likes [cite: 141-143]
-const likesCollection = (postId) => collection(db, "posts", postId, "likes");
-const likeDoc = (postId, userId) => doc(db, "posts", postId, "likes", userId);
+/**
+ * Get Firebase Auth instance (ensures initialization)
+ */
+const getFirebaseAuth = async () => {
+	await initializeFirebase();
+	return auth;
+};
 
-// /posts/{postId}/comments [cite: 144-146]
-const commentsCollection = (postId) =>
-	collection(db, "posts", postId, "comments");
+/**
+ * Get Firestore instance (ensures initialization)
+ */
+const getFirebaseDb = async () => {
+	await initializeFirebase();
+	return db;
+};
 
-// /usernames [cite: 147-149]
-const usernamesCollection = collection(db, "usernames");
-const usernameDoc = (username) => doc(db, "usernames", username.toLowerCase());
+/**
+ * Check if Firebase is initialized
+ */
+const isFirebaseInitialized = () => isInitialized;
 
-// /payments (Admin) [cite: 152-155]
-const paymentsCollection = collection(db, "payments");
-const paymentDoc = (paymentId) => doc(db, "payments", paymentId);
+// --- 2. Firestore Collection References (async getters) ---
 
-// /sponsors (Admin) [cite: 156-158]
-const sponsorsCollection = collection(db, "sponsors");
-const sponsorDoc = (sponsorId) => doc(db, "sponsors", sponsorId);
+const getUsersCollection = async () => {
+	const database = await getFirebaseDb();
+	return collection(database, "users");
+};
 
-// --- 4. Export Core Services ---
+const getUserDoc = async (userId) => {
+	const database = await getFirebaseDb();
+	return doc(database, "users", userId);
+};
+
+const getPointsHistoryCollection = async (userId) => {
+	const database = await getFirebaseDb();
+	return collection(database, "users", userId, "pointsHistory");
+};
+
+const getTransactionsReceivedCollection = async (userId) => {
+	const database = await getFirebaseDb();
+	return collection(database, "users", userId, "transactionsReceived");
+};
+
+const getPostsCollection = async () => {
+	const database = await getFirebaseDb();
+	return collection(database, "posts");
+};
+
+const getPostDoc = async (postId) => {
+	const database = await getFirebaseDb();
+	return doc(database, "posts", postId);
+};
+
+const getLikesCollection = async (postId) => {
+	const database = await getFirebaseDb();
+	return collection(database, "posts", postId, "likes");
+};
+
+const getLikeDoc = async (postId, userId) => {
+	const database = await getFirebaseDb();
+	return doc(database, "posts", postId, "likes", userId);
+};
+
+const getCommentsCollection = async (postId) => {
+	const database = await getFirebaseDb();
+	return collection(database, "posts", postId, "comments");
+};
+
+const getUsernamesCollection = async () => {
+	const database = await getFirebaseDb();
+	return collection(database, "usernames");
+};
+
+const getUsernameDoc = async (username) => {
+	const database = await getFirebaseDb();
+	return doc(database, "usernames", username.toLowerCase());
+};
+
+const getPaymentsCollection = async () => {
+	const database = await getFirebaseDb();
+	return collection(database, "payments");
+};
+
+const getPaymentDoc = async (paymentId) => {
+	const database = await getFirebaseDb();
+	return doc(database, "payments", paymentId);
+};
+
+const getSponsorsCollection = async () => {
+	const database = await getFirebaseDb();
+	return collection(database, "sponsors");
+};
+
+const getSponsorDoc = async (sponsorId) => {
+	const database = await getFirebaseDb();
+	return doc(database, "sponsors", sponsorId);
+};
+
+// --- 3. Export Core Services ---
 export {
-	db,
-	auth,
+	// Initialization (MUST be called at app startup)
+	initializeFirebase,
+	isFirebaseInitialized,
+	getFirebaseAuth,
+	getFirebaseDb,
 	// Auth methods
 	createUserWithEmailAndPassword,
 	signInWithEmailAndPassword,
@@ -100,7 +207,7 @@ export {
 	GoogleAuthProvider,
 	onAuthStateChanged,
 	signInWithPopup,
-	// Firestore methods and refs
+	// Firestore methods
 	doc,
 	getDoc,
 	setDoc,
@@ -118,20 +225,25 @@ export {
 	serverTimestamp,
 	limit,
 	orderBy,
-	// Schema-specific refs
-	usersCollection,
-	userDoc,
-	pointsHistoryCollection,
-	transactionsReceivedCollection,
-	postsCollection,
-	postDoc,
-	likesCollection,
-	likeDoc,
-	commentsCollection,
-	usernamesCollection,
-	usernameDoc,
-	paymentsCollection,
-	paymentDoc,
-	sponsorDoc,
-	sponsorsCollection,
+	// Async collection/doc getters
+	getUsersCollection,
+	getUserDoc,
+	getPointsHistoryCollection,
+	getTransactionsReceivedCollection,
+	getPostsCollection,
+	getPostDoc,
+	getLikesCollection,
+	getLikeDoc,
+	getCommentsCollection,
+	getUsernamesCollection,
+	getUsernameDoc,
+	getPaymentsCollection,
+	getPaymentDoc,
+	getSponsorsCollection,
+	getSponsorDoc,
 };
+
+// Legacy getters for backward compatibility
+// Components should call initializeFirebase() first, then use these
+export const getAuthInstance = () => auth;
+export const getDbInstance = () => db;

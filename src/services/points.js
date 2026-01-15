@@ -1,11 +1,11 @@
 import {
-	db,
-	userDoc,
-	pointsHistoryCollection,
+	getFirebaseDb,
+	getUserDoc,
+	getPointsHistoryCollection,
 	serverTimestamp,
 	doc,
+	runTransaction,
 } from "./firebase";
-import { runTransaction } from "firebase/firestore";
 
 /**
  * Apply points to a user in a SAFE atomic transaction.
@@ -18,8 +18,10 @@ export const applyPoints = async (userId, points, reason, meta = {}) => {
 	if (!userId || !points || !reason) return;
 
 	try {
-		const userRef = userDoc(userId);
-		const historyRef = doc(pointsHistoryCollection(userId));
+		const db = await getFirebaseDb();
+		const userRef = await getUserDoc(userId);
+		const historyCol = await getPointsHistoryCollection(userId);
+		const historyRef = doc(historyCol);
 
 		await runTransaction(db, async (tx) => {
 			// Read the user document first to ensure it exists

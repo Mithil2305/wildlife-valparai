@@ -1,4 +1,4 @@
-import { usersCollection, getDocs, query, where } from "./firebase.js";
+import { getUsersCollection, getDocs, query, where } from "./firebase.js";
 import { getCreatorPosts } from "./uploadPost.js";
 import { getAllPosts } from "./socialApi.js";
 
@@ -33,8 +33,9 @@ const calculateEngagementScore = (user, userPosts) => {
 export const calculateLeaderboard = async () => {
 	try {
 		// 1. Fetch all creators
+		const usersCol = await getUsersCollection();
 		const creatorsQuery = query(
-			usersCollection,
+			usersCol,
 			where("accountType", "==", "creator")
 		);
 		const snapshot = await getDocs(creatorsQuery);

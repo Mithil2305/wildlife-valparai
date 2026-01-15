@@ -50,7 +50,7 @@ import AdminPayments from "./payments/AdminPayments.jsx";
 import PaymentHistory from "./payments/PaymentHistory.jsx";
 
 // --- Auth Services ---
-import { auth, onAuthStateChanged } from "./services/firebase.js";
+import { getAuthInstance, onAuthStateChanged } from "./services/firebase.js";
 import Favorites from "./socials/Favorites.jsx";
 import LeaderboardPage from "./components/LeaderboardPage.jsx";
 import Advertise from "./components/Advertise.jsx";
@@ -74,6 +74,8 @@ const App = () => {
 
 	// Listen to auth state changes from firebase
 	useEffect(() => {
+		// Get auth instance (Firebase is already initialized in main.jsx)
+		const auth = getAuthInstance();
 		const unsubscribe = onAuthStateChanged(auth, (user) => {
 			setCurrentUser(user);
 			setLoading(false);

@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FaChevronRight, FaFire, FaLeaf } from "react-icons/fa";
+import {
+	FaChevronRight,
+	FaFacebookF,
+	FaFire,
+	FaInstagram,
+	FaLeaf,
+	FaTwitter,
+	FaWhatsapp,
+	FaYoutube,
+} from "react-icons/fa";
 import { getLatestPosts } from "../services/uploadPost.js";
 import Leaderboard from "./Leaderboard.jsx";
 import AdContainer from "./AdContainer.jsx";
@@ -15,6 +24,16 @@ const Home = () => {
 	const [loading, setLoading] = useState(true);
 	const [displayCount, setDisplayCount] = useState(6);
 
+	const SocialLink = ({ icon: Icon, href, color }) => (
+		<a
+			href={href}
+			target="_blank"
+			rel="noopener noreferrer"
+			className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all duration-300 hover:scale-110 ${color}`}
+		>
+			<Icon size={20} />
+		</a>
+	);
 	useEffect(() => {
 		fetchBlogPosts();
 	}, []);
@@ -137,7 +156,41 @@ const Home = () => {
 							<div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
 								<PopularPosts posts={blogPosts} />
 							</div>
+							<div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+								{/* Social Media Links */}
 
+								<h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+									<span className="w-2 h-2 rounded-full bg-green-500"></span>
+									Follow Us
+								</h3>
+								<div className="flex flex-wrap gap-3">
+									<SocialLink
+										icon={FaInstagram}
+										href="https://instagram.com"
+										color="text-pink-600 bg-pink-50 hover:bg-pink-100"
+									/>
+									<SocialLink
+										icon={FaFacebookF}
+										href="https://facebook.com"
+										color="text-blue-600 bg-blue-50 hover:bg-blue-100"
+									/>
+									<SocialLink
+										icon={FaYoutube}
+										href="https://youtube.com"
+										color="text-red-600 bg-red-50 hover:bg-red-100"
+									/>
+									<SocialLink
+										icon={FaTwitter}
+										href="https://twitter.com"
+										color="text-sky-500 bg-sky-50 hover:bg-sky-100"
+									/>
+									<SocialLink
+										icon={FaWhatsapp}
+										href="https://whatsapp.com"
+										color="text-green-600 bg-green-50 hover:bg-green-100"
+									/>
+								</div>
+							</div>
 							{/* Advertisement / Sponsor Slot */}
 							{/* <div className="space-y-6">
 								<AdContainer />

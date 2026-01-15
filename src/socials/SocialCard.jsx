@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { auth } from "../services/firebase.js";
+import { getAuthInstance } from "../services/firebase.js";
 import {
 	toggleLike,
 	getUserLikeStatus,
@@ -78,7 +78,8 @@ const SocialCard = ({ post, onUpdate }) => {
 
 	const audioRef = useRef(null);
 	const inputRef = useRef(null);
-	const currentUser = auth.currentUser;
+	const auth = getAuthInstance();
+	const currentUser = auth?.currentUser;
 
 	useEffect(() => {
 		checkLikeStatus();

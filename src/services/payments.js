@@ -1,8 +1,8 @@
 import {
-	db,
+	getFirebaseDb,
 	runTransaction,
-	paymentsCollection,
-	transactionsReceivedCollection,
+	getPaymentsCollection,
+	getTransactionsReceivedCollection,
 	doc,
 	getDocs,
 	query,
@@ -29,8 +29,12 @@ export const createPayment = async (
 	currency,
 	transactionRef = ""
 ) => {
-	const newPaymentRef = doc(paymentsCollection); // Generate a new ID for the payment
-	const newTransactionRef = doc(transactionsReceivedCollection(recipientId)); // New ID for user's log
+	const db = await getFirebaseDb();
+	const paymentsCol = await getPaymentsCollection();
+	const transactionsCol = await getTransactionsReceivedCollection(recipientId);
+
+	const newPaymentRef = doc(paymentsCol); // Generate a new ID for the payment
+	const newTransactionRef = doc(transactionsCol); // New ID for user's log
 
 	try {
 		await runTransaction(db, async (transaction) => {
@@ -79,7 +83,8 @@ export const createPayment = async (
  */
 export const getPaymentHistory = async (userId) => {
 	try {
-		const q = query(transactionsReceivedCollection(userId)); // Add orderBy in real app
+		const transactionsCol = await getTransactionsReceivedCollection(userId);
+		const q = query(transactionsCol); // Add orderBy in real app
 		const snapshot = await getDocs(q);
 
 		const history = [];
@@ -103,7 +108,8 @@ export const getPaymentHistory = async (userId) => {
  */
 export const getAllPayments = async () => {
 	try {
-		const q = query(paymentsCollection); // Add orderBy in real app
+		const paymentsCol = await getPaymentsCollection();
+		const q = query(paymentsCol); // Add orderBy in real app
 		const snapshot = await getDocs(q);
 
 		const payments = [];

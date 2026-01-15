@@ -15,7 +15,11 @@ import {
 } from "react-icons/hi";
 import { doc, getDoc } from "firebase/firestore";
 import { registerUser, signInWithGoogle } from "../services/authApi";
-import { auth, onAuthStateChanged, db } from "../services/firebase";
+import {
+	getAuthInstance,
+	getDbInstance,
+	onAuthStateChanged,
+} from "../services/firebase";
 
 const Register = () => {
 	const [name, setName] = useState("");
@@ -33,6 +37,7 @@ const Register = () => {
 	const navigate = useNavigate();
 
 	useEffect(() => {
+		const auth = getAuthInstance();
 		const unsubscribe = onAuthStateChanged(auth, (user) => {
 			if (user) navigate("/");
 		});
@@ -48,6 +53,7 @@ const Register = () => {
 		if (username.length < 3) return;
 		setUsernameStatus("checking");
 		try {
+			const db = getDbInstance();
 			const usernameRef = doc(db, "usernames", username.toLowerCase());
 			const usernameSnap = await getDoc(usernameRef);
 			if (usernameSnap.exists()) {
@@ -74,6 +80,7 @@ const Register = () => {
 
 		// Force check if not verified yet
 		if (usernameStatus !== "available") {
+			const db = getDbInstance();
 			const usernameRef = doc(db, "usernames", username.toLowerCase());
 			const usernameSnap = await getDoc(usernameRef);
 			if (usernameSnap.exists()) {

@@ -1,6 +1,6 @@
 /**
- * Cloudflare Worker for Wildlife Valparai Media Uploads
- * Handles secure file uploads to R2 storage
+ * Cloudflare Worker for Wildlife Valparai
+ * Handles secure file uploads to R2 storage and secure API operations
  */
 
 export default {
@@ -17,13 +17,28 @@ export default {
 			return handleUpload(request, env);
 		}
 
+		// Route: Get Firebase config (secure - only returns public-safe config)
+		if (url.pathname === "/config/firebase" && request.method === "GET") {
+			return handleFirebaseConfig(env);
+		}
+
+		// Route: Send contact email via EmailJS
+		if (url.pathname === "/email/contact" && request.method === "POST") {
+			return handleContactEmail(request, env);
+		}
+
+		// Route: Send sponsor email via EmailJS
+		if (url.pathname === "/email/sponsor" && request.method === "POST") {
+			return handleSponsorEmail(request, env);
+		}
+
 		// Route: Health check
 		if (url.pathname === "/health") {
 			return new Response(
 				JSON.stringify({
 					status: "ok",
 					timestamp: new Date().toISOString(),
-					service: "Wildlife Valparai Upload Service",
+					service: "Wildlife Valparai API Service",
 				}),
 				{
 					headers: corsHeaders({ "Content-Type": "application/json" }),
@@ -135,6 +150,131 @@ async function handleUpload(request, env) {
 				error: "Upload failed",
 				message: error.message,
 			}),
+			{
+				status: 500,
+				headers: corsHeaders({ "Content-Type": "application/json" }),
+			}
+		);
+	}
+}
+
+/**
+ * Handle Firebase config request
+ * Returns Firebase configuration stored in worker environment
+ */
+function handleFirebaseConfig(env) {
+	try {
+		const config = {
+			apiKey: env.FIREBASE_API_KEY,
+			authDomain: env.FIREBASE_AUTH_DOMAIN,
+			projectId: env.FIREBASE_PROJECT_ID,
+			storageBucket: env.FIREBASE_STORAGE_BUCKET,
+			messagingSenderId: env.FIREBASE_MESSAGING_SENDER_ID,
+			appId: env.FIREBASE_APP_ID,
+			measurementId: env.FIREBASE_MEASUREMENT_ID,
+		};
+
+		return new Response(JSON.stringify(config), {
+			status: 200,
+			headers: corsHeaders({ "Content-Type": "application/json" }),
+		});
+	} catch (error) {
+		console.error("Config error:", error);
+		return new Response(JSON.stringify({ error: "Failed to get config" }), {
+			status: 500,
+			headers: corsHeaders({ "Content-Type": "application/json" }),
+		});
+	}
+}
+
+/**
+ * Handle contact email via EmailJS API
+ */
+async function handleContactEmail(request, env) {
+	try {
+		const body = await request.json();
+
+		const emailPayload = {
+			service_id: env.EMAILJS_SERVICE_ID,
+			template_id: env.EMAILJS_TEMPLATE_ID,
+			user_id: env.EMAILJS_PUBLIC_KEY,
+			template_params: body.templateParams,
+		};
+
+		const response = await fetch(
+			"https://api.emailjs.com/api/v1.0/email/send",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(emailPayload),
+			}
+		);
+
+		if (!response.ok) {
+			throw new Error(`EmailJS error: ${response.status}`);
+		}
+
+		return new Response(
+			JSON.stringify({ success: true, message: "Email sent successfully" }),
+			{
+				status: 200,
+				headers: corsHeaders({ "Content-Type": "application/json" }),
+			}
+		);
+	} catch (error) {
+		console.error("Contact email error:", error);
+		return new Response(
+			JSON.stringify({ error: "Failed to send email", message: error.message }),
+			{
+				status: 500,
+				headers: corsHeaders({ "Content-Type": "application/json" }),
+			}
+		);
+	}
+}
+
+/**
+ * Handle sponsor email via EmailJS API
+ */
+async function handleSponsorEmail(request, env) {
+	try {
+		const body = await request.json();
+
+		const emailPayload = {
+			service_id: env.SPONSOR_SERVICE_ID,
+			template_id: env.SPONSOR_TEMPLATE_ID,
+			user_id: env.SPONSOR_PUBLIC_KEY,
+			template_params: body.templateParams,
+		};
+
+		const response = await fetch(
+			"https://api.emailjs.com/api/v1.0/email/send",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(emailPayload),
+			}
+		);
+
+		if (!response.ok) {
+			throw new Error(`EmailJS error: ${response.status}`);
+		}
+
+		return new Response(
+			JSON.stringify({ success: true, message: "Email sent successfully" }),
+			{
+				status: 200,
+				headers: corsHeaders({ "Content-Type": "application/json" }),
+			}
+		);
+	} catch (error) {
+		console.error("Sponsor email error:", error);
+		return new Response(
+			JSON.stringify({ error: "Failed to send email", message: error.message }),
 			{
 				status: 500,
 				headers: corsHeaders({ "Content-Type": "application/json" }),

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { auth, userDoc, getDoc } from "../services/firebase.js";
+import { getAuthInstance, getUserDoc, getDoc } from "../services/firebase.js";
 import { getAllPosts } from "../services/socialApi.js";
 import { calculateLeaderboard } from "../services/leaderboard.js"; // Import leaderboard logic
 import SocialCard from "./SocialCard.jsx";
@@ -138,7 +138,8 @@ const Socials = () => {
 	const [activeTab, setActiveTab] = useState("feed"); // 'feed' | 'favorites'
 	const [displayCount, setDisplayCount] = useState(5);
 	const navigate = useNavigate();
-	const currentUser = auth.currentUser;
+	const auth = getAuthInstance();
+	const currentUser = auth?.currentUser;
 
 	useEffect(() => {
 		fetchUserAndPosts();
@@ -148,7 +149,7 @@ const Socials = () => {
 		try {
 			setLoading(true);
 			if (currentUser) {
-				const userRef = userDoc(currentUser.uid);
+				const userRef = await getUserDoc(currentUser.uid);
 				const userSnap = await getDoc(userRef);
 				if (userSnap.exists()) {
 					setUser(userSnap.data());

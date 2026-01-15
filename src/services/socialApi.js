@@ -1,27 +1,32 @@
-import { db, serverTimestamp, increment } from "./firebase";
 import {
+	getFirebaseDb,
+	getPostsCollection,
+	getPostDoc,
+	getLikeDoc,
+	serverTimestamp,
+	increment,
 	doc,
 	getDoc,
 	getDocs,
-	// setDoc,
-	// deleteDoc,
 	updateDoc,
 	collection,
 	query,
 	where,
 	runTransaction,
-	collectionGroup
-} from "firebase/firestore";
+} from "./firebase";
+import { collectionGroup } from "firebase/firestore";
 import { applyPoints } from "./points";
 
 /* ===================== FEED ===================== */
 
 export const getAllPosts = async () => {
-	const snap = await getDocs(collection(db, "posts"));
+	const postsCol = await getPostsCollection();
+	const snap = await getDocs(postsCol);
 	return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 };
 
 export const getUserLikedPosts = async (userId) => {
+	const db = await getFirebaseDb();
 	const q = query(collectionGroup(db, "likes"), where("userId", "==", userId));
 	const snap = await getDocs(q);
 	return snap.docs.map((d) => d.ref.parent.parent.id);
@@ -30,13 +35,15 @@ export const getUserLikedPosts = async (userId) => {
 /* ===================== LIKES ===================== */
 
 export const getUserLikeStatus = async (postId, userId) => {
-	const snap = await getDoc(doc(db, "posts", postId, "likes", userId));
+	const likeRef = await getLikeDoc(postId, userId);
+	const snap = await getDoc(likeRef);
 	return snap.exists();
 };
 
 export const toggleLike = async (postId, userId) => {
-	const likeRef = doc(db, "posts", postId, "likes", userId);
-	const postRef = doc(db, "posts", postId);
+	const db = await getFirebaseDb();
+	const likeRef = await getLikeDoc(postId, userId);
+	const postRef = await getPostDoc(postId);
 
 	let wasLiked = false;
 	let creatorId = null;
@@ -74,7 +81,7 @@ export const toggleLike = async (postId, userId) => {
 /* ===================== SHARES ===================== */
 
 export const recordShare = async (postId) => {
-	const postRef = doc(db, "posts", postId);
+	const postRef = await getPostDoc(postId);
 	const snap = await getDoc(postRef);
 	if (!snap.exists()) return;
 

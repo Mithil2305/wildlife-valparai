@@ -16,7 +16,7 @@ import {
 	HiFire,
 	HiChartBar,
 } from "react-icons/hi";
-import { auth, userDoc, getDoc } from "../services/firebase.js";
+import { getAuthInstance, getUserDoc, getDoc } from "../services/firebase.js";
 import { getCreatorPosts, deleteBlogPost } from "../services/uploadPost.js";
 import { calculateLeaderboard } from "../services/leaderboardService.js";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
@@ -98,10 +98,11 @@ const CreatorDashboard = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			setLoading(true);
-			const currentUser = auth.currentUser;
+			const auth = getAuthInstance();
+			const currentUser = auth?.currentUser;
 			if (currentUser) {
 				try {
-					const userRef = userDoc(currentUser.uid);
+					const userRef = await getUserDoc(currentUser.uid);
 					const userSnap = await getDoc(userRef);
 					if (userSnap.exists()) {
 						const userData = userSnap.data();

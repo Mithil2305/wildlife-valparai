@@ -17,11 +17,10 @@ import {
 } from "react-icons/hi";
 import { toast } from "react-hot-toast";
 import {
-	db,
-	usersCollection,
-	postsCollection,
-	sponsorsCollection,
-	auth,
+	getDbInstance,
+	getUsersCollection,
+	getPostsCollection,
+	getSponsorsCollection,
 } from "../services/firebase.js";
 import {
 	getDocs,
@@ -80,6 +79,7 @@ const PaymentModal = ({ user, onClose, onSuccess }) => {
 	const [loading, setLoading] = useState(false);
 	const [upiId, setUpiId] = useState("Loading...");
 	const [isMarkedPaid, setIsMarkedPaid] = useState(false);
+	const db = getDbInstance();
 
 	useEffect(() => {
 		const fetchDetails = async () => {
@@ -89,13 +89,13 @@ const PaymentModal = ({ user, onClose, onSuccess }) => {
 					if (docSnap.exists()) {
 						setUpiId(docSnap.data().upiId || "Not Linked");
 					}
-				} catch (e) {
+				} catch (_e) {
 					setUpiId("Error fetching");
 				}
 			}
 		};
 		fetchDetails();
-	}, [user]);
+	}, [user, db]);
 
 	const handlePay = async (e) => {
 		e.preventDefault();
@@ -233,10 +233,14 @@ const AdminDashboard = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				// 1. Fetch Collections
-				const usersSnap = await getDocs(usersCollection);
-				const postsSnap = await getDocs(postsCollection);
-				const sponsorsSnap = await getDocs(sponsorsCollection);
+				// 1. Fetch Collections (using async getters)
+				const usersCol = await getUsersCollection();
+				const postsCol = await getPostsCollection();
+				const sponsorsCol = await getSponsorsCollection();
+
+				const usersSnap = await getDocs(usersCol);
+				const postsSnap = await getDocs(postsCol);
+				const sponsorsSnap = await getDocs(sponsorsCol);
 
 				// 2. Process Posts (Separate Blogs vs Socials)
 				const allPosts = postsSnap.docs.map((doc) => ({
@@ -309,13 +313,14 @@ const AdminDashboard = () => {
 		const name = prompt("Enter Sponsor Name:");
 		if (!name) return;
 		try {
+			const sponsorsCol = getSponsorsCollection();
 			const newSponsor = {
 				name,
 				tier: "Gold",
 				createdAt: serverTimestamp(),
 				description: "New Partner added by Admin",
 			};
-			const docRef = await addDoc(sponsorsCollection, newSponsor);
+			const docRef = await addDoc(sponsorsCol, newSponsor);
 			setSponsors([...sponsors, { id: docRef.id, ...newSponsor }]);
 			toast.success("Sponsor added!");
 		} catch (err) {
@@ -601,7 +606,11 @@ const AdminDashboard = () => {
 													<td className="px-6 py-4 text-right">
 														<button
 															onClick={() =>
-																handleDelete(postsCollection, blog.id, "blog")
+																handleDelete(
+																	getPostsCollection(),
+																	blog.id,
+																	"blog"
+																)
 															}
 															className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
 														>
@@ -649,7 +658,11 @@ const AdminDashboard = () => {
 											<div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
 												<button
 													onClick={() =>
-														handleDelete(postsCollection, post.id, "social")
+														handleDelete(
+															getPostsCollection(),
+															post.id,
+															"social"
+														)
 													}
 													className="p-3 bg-white text-red-500 rounded-full hover:bg-red-50 shadow-lg transform hover:scale-110 transition-all"
 												>
@@ -703,7 +716,11 @@ const AdminDashboard = () => {
 									>
 										<button
 											onClick={() =>
-												handleDelete(sponsorsCollection, sponsor.id, "sponsor")
+												handleDelete(
+													getSponsorsCollection(),
+													sponsor.id,
+													"sponsor"
+												)
 											}
 											className="absolute top-4 right-4 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
 										>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { auth } from "../services/firebase.js";
+import { getAuthInstance } from "../services/firebase.js";
 import { getPost, updateBlogPost } from "../services/uploadPost.js";
 import toast from "react-hot-toast";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
@@ -12,6 +12,7 @@ const EditBlog = () => {
 	const [post, setPost] = useState(null);
 	const { postId } = useParams();
 	const navigate = useNavigate();
+	const auth = getAuthInstance();
 
 	// Fetch the post data on load
 	useEffect(() => {
@@ -20,7 +21,7 @@ const EditBlog = () => {
 			const postData = await getPost(postId);
 			if (postData) {
 				// Security check: Ensure current user is the post creator
-				if (postData.creatorId !== auth.currentUser?.uid) {
+				if (postData.creatorId !== auth?.currentUser?.uid) {
 					toast.error("You are not authorized to edit this post.");
 					navigate("/dashboard/creator");
 					return;

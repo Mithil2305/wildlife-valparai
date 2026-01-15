@@ -1,5 +1,9 @@
-import { db, postsCollection, serverTimestamp, increment } from "./firebase";
 import {
+	getFirebaseDb,
+	getPostsCollection,
+	getPostDoc,
+	serverTimestamp,
+	increment,
 	doc,
 	getDoc,
 	getDocs,
@@ -12,7 +16,7 @@ import {
 	deleteDoc,
 	collection,
 	runTransaction,
-} from "firebase/firestore";
+} from "./firebase";
 import { applyPoints } from "./points";
 
 /* ===================== POSTS ===================== */
@@ -63,7 +67,8 @@ const createPost = async ({
 	audioUrl = "",
 	blogContent = "",
 }) => {
-	const postRef = doc(postsCollection);
+	const postsCol = await getPostsCollection();
+	const postRef = doc(postsCol);
 
 	await setDoc(postRef, {
 		type,
@@ -91,7 +96,7 @@ const createPost = async ({
 };
 
 export const deleteBlogPost = async (postId) => {
-	const postRef = doc(db, "posts", postId);
+	const postRef = await getPostDoc(postId);
 	const snap = await getDoc(postRef);
 	if (!snap.exists()) return;
 
@@ -111,7 +116,7 @@ export const deleteBlogPost = async (postId) => {
 };
 
 export const updateBlogPost = async (postId, { title, blogContent }) => {
-	const postRef = doc(db, "posts", postId);
+	const postRef = await getPostDoc(postId);
 	const snap = await getDoc(postRef);
 	if (!snap.exists()) return null;
 
@@ -127,18 +132,21 @@ export const updateBlogPost = async (postId, { title, blogContent }) => {
 /* ===================== FETCH ===================== */
 
 export const getPost = async (postId) => {
-	const snap = await getDoc(doc(db, "posts", postId));
+	const postRef = await getPostDoc(postId);
+	const snap = await getDoc(postRef);
 	return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 };
 
 export const getLatestPosts = async (count = 10) => {
-	const q = query(postsCollection, orderBy("createdAt", "desc"), limit(count));
+	const postsCol = await getPostsCollection();
+	const q = query(postsCol, orderBy("createdAt", "desc"), limit(count));
 	const snap = await getDocs(q);
 	return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 };
 
 export const getCreatorPosts = async (creatorId) => {
-	const q = query(postsCollection, where("creatorId", "==", creatorId));
+	const postsCol = await getPostsCollection();
+	const q = query(postsCol, where("creatorId", "==", creatorId));
 	const snap = await getDocs(q);
 	return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 };
@@ -146,6 +154,7 @@ export const getCreatorPosts = async (creatorId) => {
 /* ===================== COMMENTS ===================== */
 
 export const getPostComments = async (postId) => {
+	const db = await getFirebaseDb();
 	const q = query(
 		collection(db, "posts", postId, "comments"),
 		orderBy("createdAt", "asc")
@@ -155,8 +164,9 @@ export const getPostComments = async (postId) => {
 };
 
 export const addPostComment = async (postId, userId, username, text) => {
-	const postRef = doc(db, "posts", postId);
-	const commentRef = doc(collection(postRef, "comments"));
+	const db = await getFirebaseDb();
+	const postRef = await getPostDoc(postId);
+	const commentRef = doc(collection(db, "posts", postId, "comments"));
 
 	let creatorId = null;
 
@@ -184,7 +194,8 @@ export const addPostComment = async (postId, userId, username, text) => {
 };
 
 export const deletePostComment = async (postId, commentId, userId) => {
-	const postRef = doc(db, "posts", postId);
+	const db = await getFirebaseDb();
+	const postRef = await getPostDoc(postId);
 	const commentRef = doc(db, "posts", postId, "comments", commentId);
 
 	let creatorId = null;

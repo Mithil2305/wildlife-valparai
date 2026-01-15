@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, userDoc, getDoc } from "../services/firebase.js";
+import { getAuthInstance, getUserDoc, getDoc } from "../services/firebase.js";
 import { createBlogPost } from "../services/uploadPost.js";
 import toast from "react-hot-toast";
 import {
@@ -23,18 +23,18 @@ import {
 import { MdFormatQuote, MdFormatClear } from "react-icons/md";
 import { AiOutlineEye, AiOutlineSend } from "react-icons/ai";
 import { IoChevronUp, IoChevronDown } from "react-icons/io5";
-import { FiFolder } from "react-icons/fi";
+import { FiFolder, FiSettings, FiX } from "react-icons/fi"; // Added FiSettings and FiX
 
 // --- Toolbar Component ---
 const ToolbarButton = ({ onClick, icon: Icon, title, active = false }) => (
 	<button
 		type="button"
 		onMouseDown={(e) => {
-			e.preventDefault(); // Prevent focus loss from editor
+			e.preventDefault();
 			onClick(e);
 		}}
 		title={title}
-		className={`p-2 rounded hover:bg-gray-200 transition-colors text-gray-700 text-base w-8 h-8 flex items-center justify-center ${
+		className={`p-2 rounded hover:bg-gray-200 transition-colors text-gray-700 text-base w-8 h-8 flex items-center justify-center shrink-0 ${
 			active ? "bg-gray-300 font-bold shadow-inner" : ""
 		}`}
 	>
@@ -43,7 +43,7 @@ const ToolbarButton = ({ onClick, icon: Icon, title, active = false }) => (
 );
 
 const Divider = () => (
-	<div className="w-px h-5 bg-gray-300 mx-1 self-center opacity-50" />
+	<div className="w-px h-5 bg-gray-300 mx-1 self-center opacity-50 shrink-0" />
 );
 
 // --- Sidebar Section Component ---
@@ -71,23 +71,119 @@ const SidebarSection = ({ title, children, isOpen, onToggle }) => {
 	);
 };
 
+// --- Reusable Settings Content (Used in Desktop Sidebar & Mobile Drawer) ---
+const SettingsContent = ({
+	activeSection,
+	toggleSection,
+	labels,
+	setLabels,
+}) => {
+	return (
+		<>
+			<h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 px-2">
+				Post Settings
+			</h3>
+
+			<SidebarSection
+				title="Labels"
+				isOpen={activeSection === "Labels"}
+				onToggle={() => toggleSection("Labels")}
+			>
+				<input
+					type="text"
+					value={labels}
+					onChange={(e) => setLabels(e.target.value)}
+					placeholder="Separate labels with commas"
+					className="w-full p-2 border border-gray-300 rounded text-sm focus:border-[#335833] focus:ring-1 focus:ring-[#335833] outline-none"
+				/>
+				<p className="text-xs text-gray-400 mt-1.5">
+					e.g., Wildlife, Valparai, Elephants
+				</p>
+			</SidebarSection>
+
+			<SidebarSection
+				title="Published on"
+				isOpen={activeSection === "Published"}
+				onToggle={() => toggleSection("Published")}
+			>
+				<div className="text-gray-600 bg-gray-50 p-2 rounded border border-gray-100">
+					<p className="mb-1 font-medium">Automatic</p>
+					<p className="text-xs text-gray-500">{new Date().toLocaleString()}</p>
+				</div>
+			</SidebarSection>
+
+			<SidebarSection
+				title="Permalink"
+				isOpen={activeSection === "Permalink"}
+				onToggle={() => toggleSection("Permalink")}
+			>
+				<div className="text-gray-500 italic text-xs">
+					Permalink will be generated automatically from the post title.
+				</div>
+			</SidebarSection>
+
+			<SidebarSection
+				title="Location"
+				isOpen={activeSection === "Location"}
+				onToggle={() => toggleSection("Location")}
+			>
+				<input
+					type="text"
+					placeholder="Search location"
+					className="w-full p-2 border border-gray-300 rounded text-sm focus:border-[#335833] focus:ring-1 focus:ring-[#335833] outline-none"
+				/>
+			</SidebarSection>
+
+			<SidebarSection
+				title="Options"
+				isOpen={activeSection === "Options"}
+				onToggle={() => toggleSection("Options")}
+			>
+				<div className="space-y-2">
+					<label className="flex items-center space-x-2 cursor-pointer">
+						<input
+							type="radio"
+							name="comments"
+							defaultChecked
+							className="text-[#335833] focus:ring-[#335833]"
+						/>
+						<span>Allow comments</span>
+					</label>
+					<label className="flex items-center space-x-2 cursor-pointer">
+						<input
+							type="radio"
+							name="comments"
+							className="text-[#335833] focus:ring-[#335833]"
+						/>
+						<span>Do not allow comments</span>
+					</label>
+				</div>
+			</SidebarSection>
+		</>
+	);
+};
+
 const CreateBlog = () => {
 	const [title, setTitle] = useState("");
-	const [content, setContent] = useState(""); // Stores HTML string
+	const [content, setContent] = useState("");
 	const [labels, setLabels] = useState("");
 	const [user, setUser] = useState(null);
 	const [loading, setLoading] = useState(false);
-	const [lastSaved, setLastSaved] = useState(null); // For Draft Status
+	const [lastSaved, setLastSaved] = useState(null);
 	const [activeSection, setActiveSection] = useState("Labels");
+
+	// Mobile Sidebar State
+	const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
+
 	const navigate = useNavigate();
 	const editorRef = useRef(null);
+	const auth = getAuthInstance();
 
 	// --- 1. User Auth ---
 	useEffect(() => {
-		// Using auth directly from services/firebase.js
 		const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
 			if (currentUser) {
-				const userRef = userDoc(currentUser.uid);
+				const userRef = await getUserDoc(currentUser.uid);
 				const userSnap = await getDoc(userRef);
 				if (userSnap.exists()) {
 					setUser(userSnap.data());
@@ -97,10 +193,9 @@ const CreateBlog = () => {
 			}
 		});
 		return () => unsubscribe();
-	}, [navigate]);
+	}, [navigate, auth]);
 
 	// --- 2. Draft System (Auto-Save & Load) ---
-	// Load Draft on Mount
 	useEffect(() => {
 		const savedDraft = localStorage.getItem("blogDraft");
 		if (savedDraft) {
@@ -123,15 +218,13 @@ const CreateBlog = () => {
 		}
 	}, []);
 
-	// Save Draft on Change (Debounced)
 	useEffect(() => {
 		const saveTimer = setTimeout(() => {
 			if (title || content) {
 				localStorage.setItem("blogDraft", JSON.stringify({ title, content }));
 				setLastSaved(new Date());
 			}
-		}, 1000); // Save after 1 second of inactivity
-
+		}, 1000);
 		return () => clearTimeout(saveTimer);
 	}, [title, content]);
 
@@ -143,9 +236,7 @@ const CreateBlog = () => {
 
 	const handleLink = () => {
 		const url = prompt("Enter the URL:");
-		if (url) {
-			formatDoc("createLink", url);
-		}
+		if (url) formatDoc("createLink", url);
 	};
 
 	const handleImage = () => {
@@ -155,7 +246,6 @@ const CreateBlog = () => {
 		if (url) formatDoc("insertImage", url);
 	};
 
-	// Handle content changes
 	const handleInput = () => {
 		if (editorRef.current) {
 			const html = editorRef.current.innerHTML;
@@ -172,11 +262,8 @@ const CreateBlog = () => {
 
 		setLoading(true);
 
-		// We pass the HTML content directly.
-		// Note: In production, you should sanitize this HTML before displaying it
-		// to prevent XSS, although React usually escapes content unless dangerouslySetInnerHTML is used.
 		const blogPromise = createBlogPost({
-			creatorId: auth.currentUser.uid,
+			creatorId: auth?.currentUser?.uid,
 			creatorUsername: user.username,
 			creatorProfilePhoto: user.profilePhotoUrl || "",
 			title,
@@ -187,7 +274,7 @@ const CreateBlog = () => {
 			loading: "Publishing post...",
 			success: () => {
 				setLoading(false);
-				localStorage.removeItem("blogDraft"); // Clear draft on success
+				localStorage.removeItem("blogDraft");
 				navigate("/dashboard/creator");
 				return <b>Published successfully!</b>;
 			},
@@ -205,18 +292,18 @@ const CreateBlog = () => {
 	return (
 		<div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
 			{/* --- Header --- */}
-			<header className="bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center shrink-0 z-20">
-				<div className="flex gap-4">
+			<header className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 flex justify-between items-center shrink-0 z-20 gap-2">
+				<div className="flex flex-col md:flex-row md:items-baseline md:gap-4 flex-grow min-w-0">
 					<input
 						type="text"
 						placeholder="Post Title"
-						className="w-5xl text-3xl font-bold text-gray-800 placeholder-gray-300 border-none focus:ring-0 focus:outline-none bg-transparent mb-4"
+						className="w-full text-xl md:text-3xl font-bold text-gray-800 placeholder-gray-300 border-none focus:ring-0 focus:outline-none bg-transparent"
 						value={title}
 						onChange={(e) => setTitle(e.target.value)}
 					/>
 					{lastSaved && (
-						<span className="text-xs text-gray-400 transition-opacity duration-500">
-							Draft Saved at{" "}
+						<span className="text-[10px] md:text-xs text-gray-400 whitespace-nowrap">
+							Draft Saved{" "}
 							{lastSaved.toLocaleTimeString([], {
 								hour: "2-digit",
 								minute: "2-digit",
@@ -224,33 +311,45 @@ const CreateBlog = () => {
 						</span>
 					)}
 				</div>
-				<div className="flex items-center space-x-3">
+
+				<div className="flex items-center space-x-2 shrink-0">
+					{/* Preview Button - Hidden on very small mobile to save space */}
 					<button
 						type="button"
-						className="flex items-center gap-2 px-3 py-1.5 text-gray-600 bg-gray-50 border border-gray-300 rounded hover:bg-gray-100 transition-all text-sm font-medium"
+						className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-gray-600 bg-gray-50 border border-gray-300 rounded hover:bg-gray-100 transition-all text-sm font-medium"
 						onClick={() => toast("Preview feature coming soon!")}
 					>
 						<AiOutlineEye size={18} />
-						Preview
+						<span className="hidden md:inline">Preview</span>
 					</button>
+
 					<button
 						type="button"
 						onClick={handleSubmit}
 						disabled={loading}
-						className="flex items-center gap-2 px-4 py-1.5 bg-[#335833] text-white rounded hover:bg-opacity-90 transition-all text-sm font-bold shadow-sm disabled:opacity-50"
+						className="flex items-center gap-2 px-3 md:px-4 py-1.5 bg-[#335833] text-white rounded hover:bg-opacity-90 transition-all text-sm font-bold shadow-sm disabled:opacity-50"
 					>
 						{loading ? "Publishing..." : "Publish"}
 						{!loading && <AiOutlineSend size={16} />}
+					</button>
+
+					{/* Mobile Settings Toggle */}
+					<button
+						type="button"
+						onClick={() => setIsMobileSettingsOpen(true)}
+						className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded"
+					>
+						<FiSettings size={20} />
 					</button>
 				</div>
 			</header>
 
 			{/* --- Workspace (Editor + Sidebar) --- */}
-			<div className="flex flex-grow overflow-hidden">
+			<div className="flex flex-grow overflow-hidden relative">
 				{/* --- Main Editor Column --- */}
-				<main className="flex-grow flex flex-col bg-white shadow-sm m-4 rounded-lg border border-gray-200 overflow-hidden relative">
-					{/* Toolbar (Fixed at Top) */}
-					<div className="bg-gray-50 border-b border-gray-200 px-3 py-2 flex flex-wrap items-center gap-1 shrink-0 overflow-x-auto select-none">
+				<main className="flex-grow flex flex-col bg-white shadow-sm md:m-4 m-0 md:rounded-lg border-x md:border-y border-gray-200 overflow-hidden relative">
+					{/* Toolbar (Scrollable on mobile) */}
+					<div className="bg-gray-50 border-b border-gray-200 px-2 md:px-3 py-2 flex items-center gap-1 shrink-0 overflow-x-auto no-scrollbar touch-pan-x">
 						<ToolbarButton
 							onClick={() => formatDoc("undo")}
 							icon={BiUndo}
@@ -345,109 +444,64 @@ const CreateBlog = () => {
 
 					{/* Scrollable Edit Area */}
 					<div className="grow overflow-y-auto">
-						<div className="max-w-4xl mx-auto px-8 py-8 min-h-full">
-							{/* Content Editor */}
+						<div className="max-w-4xl mx-auto px-4 py-4 md:px-8 md:py-8 min-h-full">
 							<div
 								ref={editorRef}
-								className="w-full outline-none text-lg text-gray-800 prose max-w-none pb-20 min-h-[300px]"
+								className="w-full outline-none text-gray-800 prose prose-sm md:prose-lg max-w-none pb-20 min-h-[300px]"
 								contentEditable={true}
 								onInput={handleInput}
 								data-placeholder="Compose your story..."
 								placeholder="Compose your story..."
 								autoFocus={true}
-								autoselect={true}
 								style={{ whiteSpace: "pre-wrap" }}
 							/>
 						</div>
 					</div>
 				</main>
 
-				{/* --- Right Sidebar --- */}
+				{/* --- Desktop Right Sidebar --- */}
 				<aside className="w-80 bg-white border-l border-gray-200 shrink-0 overflow-y-auto hidden md:block">
 					<div className="p-4">
-						<h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
-							Post Settings
-						</h3>
-
-						<SidebarSection
-							title="Labels"
-							isOpen={activeSection === "Labels"}
-							onToggle={() => toggleSection("Labels")}
-						>
-							<input
-								type="text"
-								value={labels}
-								onChange={(e) => setLabels(e.target.value)}
-								placeholder="Separate labels with commas"
-								className="w-full p-2 border border-gray-300 rounded text-sm focus:border-[#335833] focus:ring-1 focus:ring-[#335833] outline-none"
-							/>
-							<p className="text-xs text-gray-400 mt-1.5">
-								e.g., Wildlife, Valparai, Elephants
-							</p>
-						</SidebarSection>
-
-						<SidebarSection
-							title="Published on"
-							isOpen={activeSection === "Published"}
-							onToggle={() => toggleSection("Published")}
-						>
-							<div className="text-gray-600 bg-gray-50 p-2 rounded border border-gray-100">
-								<p className="mb-1 font-medium">Automatic</p>
-								<p className="text-xs text-gray-500">
-									{new Date().toLocaleString()}
-								</p>
-							</div>
-						</SidebarSection>
-
-						<SidebarSection
-							title="Permalink"
-							isOpen={activeSection === "Permalink"}
-							onToggle={() => toggleSection("Permalink")}
-						>
-							<div className="text-gray-500 italic text-xs">
-								Permalink will be generated automatically from the post title.
-							</div>
-						</SidebarSection>
-
-						<SidebarSection
-							title="Location"
-							isOpen={activeSection === "Location"}
-							onToggle={() => toggleSection("Location")}
-						>
-							<input
-								type="text"
-								placeholder="Search location"
-								className="w-full p-2 border border-gray-300 rounded text-sm focus:border-[#335833] focus:ring-1 focus:ring-[#335833] outline-none"
-							/>
-						</SidebarSection>
-
-						<SidebarSection
-							title="Options"
-							isOpen={activeSection === "Options"}
-							onToggle={() => toggleSection("Options")}
-						>
-							<div className="space-y-2">
-								<label className="flex items-center space-x-2 cursor-pointer">
-									<input
-										type="radio"
-										name="comments"
-										defaultChecked
-										className="text-[#335833] focus:ring-[#335833]"
-									/>
-									<span>Allow comments</span>
-								</label>
-								<label className="flex items-center space-x-2 cursor-pointer">
-									<input
-										type="radio"
-										name="comments"
-										className="text-[#335833] focus:ring-[#335833]"
-									/>
-									<span>Do not allow comments</span>
-								</label>
-							</div>
-						</SidebarSection>
+						<SettingsContent
+							activeSection={activeSection}
+							toggleSection={toggleSection}
+							labels={labels}
+							setLabels={setLabels}
+						/>
 					</div>
 				</aside>
+
+				{/* --- Mobile Settings Drawer (Overlay) --- */}
+				{isMobileSettingsOpen && (
+					<div className="absolute inset-0 z-50 flex justify-end md:hidden">
+						{/* Backdrop */}
+						<div
+							className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+							onClick={() => setIsMobileSettingsOpen(false)}
+						/>
+
+						{/* Drawer Panel */}
+						<div className="relative w-4/5 max-w-xs bg-white h-full shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
+							<div className="flex justify-between items-center p-4 border-b border-gray-100">
+								<h2 className="font-bold text-gray-700">Settings</h2>
+								<button
+									onClick={() => setIsMobileSettingsOpen(false)}
+									className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+								>
+									<FiX size={20} />
+								</button>
+							</div>
+							<div className="p-4">
+								<SettingsContent
+									activeSection={activeSection}
+									toggleSection={toggleSection}
+									labels={labels}
+									setLabels={setLabels}
+								/>
+							</div>
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	);

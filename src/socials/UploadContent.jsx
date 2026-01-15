@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, userDoc, getDoc } from "../services/firebase.js";
+import { getAuthInstance, getUserDoc, getDoc } from "../services/firebase.js";
 import { createPhotoAudioPost } from "../services/uploadPost.js";
 import { uploadMediaToR2 } from "../services/r2Upload.js";
 import toast from "react-hot-toast";
@@ -15,14 +15,15 @@ const UploadContent = () => {
 	const [uploading, setUploading] = useState(false);
 	const [userData, setUserData] = useState(null);
 	const navigate = useNavigate();
-	const currentUser = auth.currentUser;
+	const auth = getAuthInstance();
+	const currentUser = auth?.currentUser;
 
 	// Fetch user data from Firestore to get actual username and profile photo
 	useEffect(() => {
 		const fetchUserData = async () => {
 			if (currentUser) {
 				try {
-					const userRef = userDoc(currentUser.uid);
+					const userRef = await getUserDoc(currentUser.uid);
 					const userSnap = await getDoc(userRef);
 					if (userSnap.exists()) {
 						setUserData(userSnap.data());

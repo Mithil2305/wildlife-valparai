@@ -5,9 +5,11 @@ import {
 	getDoc,
 	setDoc,
 	serverTimestamp,
-} from "firebase/firestore";
+	getAuthInstance,
+	getDbInstance,
+	getUsersCollection,
+} from "../services/firebase.js";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { db, auth, usersCollection } from "../services/firebase.js";
 import toast from "react-hot-toast";
 
 const CreateAdminTool = () => {
@@ -32,7 +34,8 @@ const CreateAdminTool = () => {
 		setStatus("Checking user...");
 
 		try {
-			const userRef = doc(usersCollection, targetUserId);
+			const usersCol = await getUsersCollection();
+			const userRef = doc(usersCol, targetUserId);
 			const userSnap = await getDoc(userRef);
 
 			if (!userSnap.exists()) {
@@ -66,6 +69,9 @@ const CreateAdminTool = () => {
 		setStatus("Creating user...");
 
 		try {
+			const auth = getAuthInstance();
+			const db = getDbInstance();
+
 			// Create Auth User
 			const userCredential = await createUserWithEmailAndPassword(
 				auth,

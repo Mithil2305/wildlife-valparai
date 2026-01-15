@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../services/firebase.js";
+import { getAuthInstance } from "../services/firebase.js";
 import { getUserLikedPosts } from "../services/socialApi.js";
 import SocialCard from "./SocialCard.jsx";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
@@ -11,7 +11,8 @@ const Favorites = () => {
 	const [likedPosts, setLikedPosts] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const navigate = useNavigate();
-	const currentUser = auth.currentUser;
+	const auth = getAuthInstance();
+	const currentUser = auth?.currentUser;
 
 	useEffect(() => {
 		if (!currentUser) {

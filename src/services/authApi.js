@@ -1,15 +1,15 @@
 import {
-	auth,
-	db,
+	getAuthInstance,
+	getDbInstance,
 	createUserWithEmailAndPassword,
 	signInWithEmailAndPassword,
 	signOut as firebaseSignOut,
 	GoogleAuthProvider,
 	onAuthStateChanged,
 	runTransaction,
-	userDoc,
+	getUserDoc,
 	getDoc, // Import getDoc for Google Sign-In check
-	usernameDoc,
+	getUsernameDoc,
 	serverTimestamp,
 	updateDoc, // Import updateDoc
 	signInWithPopup, // Import signInWithPopup
@@ -39,8 +39,8 @@ const _createUserDocuments = async (
 	profilePhotoUrl,
 	upiId = ""
 ) => {
-	const newUserRef = userDoc(userId);
-	const newUsernameRef = usernameDoc(username);
+	const newUserRef = await getUserDoc(userId);
+	const newUsernameRef = await getUsernameDoc(username);
 
 	// 1. Create the user document as per /users/{userId} schema [cite: 132-156]
 	const newUserProfile = {
@@ -77,7 +77,9 @@ export const registerUser = async (
 	upiId
 ) => {
 	const lowerCaseUsername = username.toLowerCase();
-	const newUsernameRef = usernameDoc(lowerCaseUsername);
+	const newUsernameRef = await getUsernameDoc(lowerCaseUsername);
+	const db = getDbInstance();
+	const auth = getAuthInstance();
 
 	try {
 		// Step 1: Check if username is taken inside a transaction [cite: 150-151]
@@ -123,6 +125,7 @@ export const registerUser = async (
  */
 export const loginUser = async (email, password) => {
 	try {
+		const auth = getAuthInstance();
 		const userCredential = await signInWithEmailAndPassword(
 			auth,
 			email,
@@ -140,6 +143,7 @@ export const loginUser = async (email, password) => {
  */
 export const signOut = async () => {
 	try {
+		const auth = getAuthInstance();
 		await firebaseSignOut(auth);
 	} catch (error) {
 		console.error("Error signing out:", error);
@@ -151,6 +155,7 @@ export const signOut = async () => {
  * Attaches a listener to the user's authentication state.
  */
 export const onAuthStateChange = (callback) => {
+	const auth = getAuthInstance();
 	return onAuthStateChanged(auth, callback);
 };
 
@@ -169,7 +174,7 @@ const _generateUniqueUsername = async (transaction, baseUsername) => {
 	let finalUsername = username;
 
 	while (!isUnique && attempts < 5) {
-		const usernameRef = usernameDoc(finalUsername);
+		const usernameRef = await getUsernameDoc(finalUsername);
 		const usernameSnap = await transaction.get(usernameRef);
 		if (!usernameSnap.exists()) {
 			isUnique = true;
@@ -186,7 +191,7 @@ const _generateUniqueUsername = async (transaction, baseUsername) => {
 	}
 
 	// Final check, though it's highly unlikely to fail now
-	const finalUsernameRef = usernameDoc(finalUsername);
+	const finalUsernameRef = await getUsernameDoc(finalUsername);
 	const finalSnap = await transaction.get(finalUsernameRef);
 	if (finalSnap.exists()) {
 		throw new Error(
@@ -204,11 +209,13 @@ const _generateUniqueUsername = async (transaction, baseUsername) => {
 export const signInWithGoogle = async () => {
 	const provider = new GoogleAuthProvider();
 	try {
+		const auth = getAuthInstance();
+		const db = getDbInstance();
 		const result = await signInWithPopup(auth, provider);
 		const user = result.user;
 
 		// Check if user already exists in Firestore
-		const userRef = userDoc(user.uid);
+		const userRef = await getUserDoc(user.uid);
 		const docSnap = await getDoc(userRef);
 
 		if (!docSnap.exists()) {
@@ -261,7 +268,7 @@ export const updateUserProfile = async (userId, data) => {
 		throw new Error("User ID and data are required to update profile.");
 	}
 	try {
-		const userRef = userDoc(userId);
+		const userRef = await getUserDoc(userId);
 		await updateDoc(userRef, data);
 	} catch (error) {
 		console.error("Error updating user profile:", error);

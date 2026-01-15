@@ -4,8 +4,12 @@ import {
 	addPostComment,
 	deletePostComment,
 } from "../services/uploadPost.js";
-import { auth, userDoc, getDoc } from "../services/firebase.js";
-import { onAuthStateChanged } from "firebase/auth";
+import {
+	getAuthInstance,
+	getUserDoc,
+	getDoc,
+	onAuthStateChanged,
+} from "../services/firebase.js";
 import toast from "react-hot-toast";
 import { FaTrash, FaPaperPlane } from "react-icons/fa";
 
@@ -18,10 +22,11 @@ const Comments = ({ postId }) => {
 
 	// Listen to auth state
 	useEffect(() => {
+		const auth = getAuthInstance();
 		const unsubscribe = onAuthStateChanged(auth, async (user) => {
 			setCurrentUser(user);
 			if (user) {
-				const userRef = userDoc(user.uid);
+				const userRef = await getUserDoc(user.uid);
 				const userSnap = await getDoc(userRef);
 				if (userSnap.exists()) {
 					setCurrentUserProfile(userSnap.data());

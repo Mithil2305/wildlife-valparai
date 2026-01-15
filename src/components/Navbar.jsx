@@ -5,9 +5,9 @@ import { HiDocumentText, HiPhotograph } from "react-icons/hi";
 
 // Import auth functions
 import {
-	auth,
+	getAuthInstance,
 	onAuthStateChanged,
-	userDoc,
+	getUserDoc,
 	getDoc,
 } from "../services/firebase";
 import { signOut } from "../services/authApi";
@@ -60,10 +60,10 @@ const CreatePostDropdown = ({ onClose }) => {
 	};
 
 	return (
-		<div className="relative">
+		<div className="relative cursor-pointer">
 			<button
 				onClick={() => setIsOpen(!isOpen)}
-				className="flex items-center gap-2 bg-[#335833] text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-[#2a4a2a] transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 ring-2 ring-offset-2 ring-[#335833]/20"
+				className="flex cursor-pointer items-center gap-2 bg-[#335833] text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-[#2a4a2a] transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 ring-2 ring-offset-2 ring-[#335833]/20"
 			>
 				<FaPlus className="text-[10px]" />
 				<span>Create</span>
@@ -89,13 +89,13 @@ const CreatePostDropdown = ({ onClose }) => {
 						</div>
 						<button
 							onClick={() => handleNavigation("/upload/blog")}
-							className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors text-left group"
+							className="w-full flex cursor-pointer items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors text-left group"
 						>
 							<div className="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-100 transition-colors group-hover:scale-110 duration-200">
 								<HiDocumentText className="text-lg" />
 							</div>
 							<div>
-								<p className="font-bold text-gray-800 text-sm group-hover:text-blue-700 transition-colors">
+								<p className="font-bold  text-gray-800 text-sm group-hover:text-blue-700 transition-colors">
 									Write Article
 								</p>
 								<p className="text-[11px] text-gray-500">
@@ -106,7 +106,7 @@ const CreatePostDropdown = ({ onClose }) => {
 
 						<button
 							onClick={() => handleNavigation("/upload/content")}
-							className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors text-left group"
+							className="cursor-pointer w-full flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors text-left group"
 						>
 							<div className="w-10 h-10 flex items-center justify-center bg-green-50 text-green-600 rounded-xl group-hover:bg-green-100 transition-colors group-hover:scale-110 duration-200">
 								<HiPhotograph className="text-lg" />
@@ -153,11 +153,12 @@ const Navbar = () => {
 	};
 
 	useEffect(() => {
+		const auth = getAuthInstance();
 		const unsubscribe = onAuthStateChanged(auth, async (user) => {
 			setCurrentUser(user);
 			if (user) {
 				try {
-					const userRef = userDoc(user.uid);
+					const userRef = await getUserDoc(user.uid);
 					const userSnap = await getDoc(userRef);
 					if (userSnap.exists()) {
 						setUserProfile(userSnap.data());

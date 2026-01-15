@@ -1,4 +1,4 @@
-import { usersCollection, getDocs, query } from "./firebase.js";
+import { getUsersCollection, getDocs, query } from "./firebase.js";
 
 /**
  * Cash prize distribution
@@ -20,7 +20,8 @@ export const calculateLeaderboard = async (limitCount = 100) => {
 	try {
 		console.log("Fetching leaderboard data...");
 		// 1. Fetch all users
-		const q = query(usersCollection);
+		const usersCol = await getUsersCollection();
+		const q = query(usersCol);
 		const snapshot = await getDocs(q);
 
 		console.log(`Fetched ${snapshot.size} users.`);

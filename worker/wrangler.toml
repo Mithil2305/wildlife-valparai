@@ -7,9 +7,32 @@ compatibility_date = "2025-01-19"
 binding = "WILDLIFE_BUCKET"
 bucket_name = "wildlife-valparai"
 
-# Environment Variables
+# Non-sensitive Environment Variables
 [vars]
 PUBLIC_BUCKET_URL = "https://pub-ec4e8abf64bd4b9688cf5a389c42ffac.r2.dev"
+
+# ============================================================================
+# SECRETS - Set these using: wrangler secret put <SECRET_NAME>
+# ============================================================================
+# Firebase Configuration (run these commands to set secrets):
+#   wrangler secret put FIREBASE_API_KEY
+#   wrangler secret put FIREBASE_AUTH_DOMAIN
+#   wrangler secret put FIREBASE_PROJECT_ID
+#   wrangler secret put FIREBASE_STORAGE_BUCKET
+#   wrangler secret put FIREBASE_MESSAGING_SENDER_ID
+#   wrangler secret put FIREBASE_APP_ID
+#   wrangler secret put FIREBASE_MEASUREMENT_ID
+#
+# EmailJS Configuration (Contact Form):
+#   wrangler secret put EMAILJS_SERVICE_ID
+#   wrangler secret put EMAILJS_TEMPLATE_ID
+#   wrangler secret put EMAILJS_PUBLIC_KEY
+#
+# EmailJS Configuration (Sponsor Form):
+#   wrangler secret put SPONSOR_SERVICE_ID
+#   wrangler secret put SPONSOR_TEMPLATE_ID
+#   wrangler secret put SPONSOR_PUBLIC_KEY
+# ============================================================================
 
 # Production settings (optional)
 # [env.production]

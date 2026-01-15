@@ -14,7 +14,7 @@ import toast from "react-hot-toast";
 // Import the login functions from your authApi service
 import { loginUser, signInWithGoogle } from "../services/authApi.js";
 // Import auth state to redirect if already logged in
-import { auth, onAuthStateChanged } from "../services/firebase.js";
+import { getAuthInstance, onAuthStateChanged } from "../services/firebase.js";
 
 const Login = () => {
 	const [email, setEmail] = useState("");
@@ -24,6 +24,7 @@ const Login = () => {
 	const navigate = useNavigate();
 
 	useEffect(() => {
+		const auth = getAuthInstance();
 		const unsubscribe = onAuthStateChanged(auth, (user) => {
 			if (user) {
 				navigate("/");

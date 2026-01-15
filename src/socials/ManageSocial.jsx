@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../services/firebase.js";
+import { getAuthInstance } from "../services/firebase.js";
 import { getCreatorPosts, deleteBlogPost } from "../services/uploadPost.js";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import toast from "react-hot-toast";
@@ -10,7 +10,8 @@ const ManageSocial = () => {
 	const [posts, setPosts] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const navigate = useNavigate();
-	const currentUser = auth.currentUser;
+	const auth = getAuthInstance();
+	const currentUser = auth?.currentUser;
 
 	useEffect(() => {
 		if (!currentUser) {

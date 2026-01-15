@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-	auth,
-	userDoc,
+	getAuthInstance,
+	getUserDoc,
 	getDoc,
 	onAuthStateChanged,
 } from "../services/firebase.js";
@@ -28,11 +28,13 @@ import {
 const EditProfileModal = ({ user, onClose, onSave }) => {
 	const [name, setName] = useState(user.name);
 	const [bio, setBio] = useState(user.bio || "");
+	const [upi, setUpi] = useState(user.upiId || "");
 	const [phone, setPhone] = useState(user.phone || "");
 	const [profileImageFile, setProfileImageFile] = useState(null);
 	const [imagePreview, setImagePreview] = useState(user.profilePhotoUrl);
 	const [isUploading, setIsUploading] = useState(false);
 	const fileInputRef = useRef(null);
+	const auth = getAuthInstance();
 
 	const handleImageChange = (e) => {
 		const file = e.target.files[0];
@@ -45,7 +47,6 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 			setImagePreview(URL.createObjectURL(file));
 		}
 	};
-
 	const handleSave = async (e) => {
 		e.preventDefault();
 		if (!name.trim()) {
@@ -69,6 +70,7 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 			const updatedData = {
 				name: name.trim(),
 				bio: bio.trim(),
+				upiId: upi.trim(),
 				phone: phone.trim(),
 				profilePhotoUrl: newPhotoUrl,
 			};
@@ -124,7 +126,7 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 									src={
 										imagePreview ||
 										`https://ui-avatars.com/api/?name=${encodeURIComponent(
-											user.name
+											user.name || user.username || "User"
 										)}&size=128&background=335833&color=fff`
 									}
 									alt="Preview"
@@ -163,6 +165,18 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 							/>
 						</div>
 
+						<div>
+							<label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+								UPI ID
+							</label>
+							<input
+								type="text"
+								value={upi}
+								onChange={(e) => setUpi(e.target.value)}
+								className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#335833] focus:bg-white outline-none transition-all font-medium"
+								placeholder="yourname123@oksbi"
+							/>
+						</div>
 						<div>
 							<label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
 								Phone
@@ -226,10 +240,11 @@ const Profile = () => {
 	const navigate = useNavigate();
 
 	useEffect(() => {
+		const auth = getAuthInstance();
 		const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
 			if (currentUser) {
 				try {
-					const userRef = userDoc(currentUser.uid);
+					const userRef = await getUserDoc(currentUser.uid);
 					const userSnap = await getDoc(userRef);
 					if (userSnap.exists()) {
 						setUser(userSnap.data());
@@ -287,10 +302,10 @@ const Profile = () => {
 											src={
 												user.profilePhotoUrl ||
 												`https://ui-avatars.com/api/?name=${encodeURIComponent(
-													user.name
+													user.name || user.username || "User"
 												)}&size=128&background=335833&color=fff`
 											}
-											alt={user.name}
+											alt={user.name || "User"}
 											className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white bg-gray-100"
 										/>
 									</div>
@@ -332,10 +347,6 @@ const Profile = () => {
 												{user.phone}
 											</div>
 										)}
-										<div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg">
-											<FaMapMarkerAlt className="text-[#335833]" />
-											Valparai, India
-										</div>
 									</div>
 								</div>
 							</div>

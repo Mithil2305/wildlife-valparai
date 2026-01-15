@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
-import emailjs from "@emailjs/browser";
+import { sendSponsorEmail } from "../services/workerApi.js";
 import {
 	HiStar,
 	HiExternalLink,
@@ -210,12 +210,8 @@ const Sponsor = () => {
 		setIsSubmitting(true);
 
 		try {
-			await emailjs.send(
-				import.meta.env.VITE_SPONSOR_SERVICE_ID,
-				import.meta.env.VITE_SPONSOR_TEMPLATE_ID,
-				formData,
-				import.meta.env.VITE_SPONSOR_PUBLIC_KEY
-			);
+			// Send email through secure worker API
+			await sendSponsorEmail(formData);
 			toast.success("Thank you for your support! We'll contact you shortly.");
 			setFormData({
 				name: "",

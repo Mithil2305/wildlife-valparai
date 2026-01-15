@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEdit, FaTrash, FaEye } from "react-icons/fa";
-import { auth } from "../services/firebase.js";
+import { getAuthInstance } from "../services/firebase.js";
 import { getCreatorPosts, deleteBlogPost } from "../services/uploadPost.js";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import toast from "react-hot-toast";
@@ -15,7 +15,8 @@ const ManageBlogs = () => {
 	useEffect(() => {
 		const fetchData = async () => {
 			setLoading(true);
-			const currentUser = auth.currentUser;
+			const auth = getAuthInstance();
+			const currentUser = auth?.currentUser;
 			if (currentUser) {
 				const creatorPosts = await getCreatorPosts(currentUser.uid);
 				setPosts(creatorPosts);
