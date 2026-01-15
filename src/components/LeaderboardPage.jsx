@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	Trophy,
 	Star,
@@ -12,10 +12,16 @@ import {
 	Edit3,
 	Image as ImageIcon,
 	User,
+	Users,
 	Zap,
 	TrendingUp,
 	Clock,
 	Calendar,
+	ArrowUpRight,
+	ArrowDownRight,
+	Info,
+	Camera,
+	PenLine,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { calculateLeaderboard, PRIZES } from "../services/leaderboard.js";
@@ -97,7 +103,7 @@ const LeaderboardSkeleton = () => (
 );
 
 /**
- * COMPONENT: Bento Grid Item Wrapper
+ * COMPONENT: Bento Grid Item Wrapper (with motion)
  */
 const BentoBox = ({
 	title,
@@ -111,7 +117,11 @@ const BentoBox = ({
 		iconBgClass || `bg-opacity-10 ${accentColor.replace("text-", "bg-")}`;
 
 	return (
-		<div
+		<motion.div
+			initial={{ opacity: 0, y: 16 }}
+			animate={{ opacity: 1, y: 0 }}
+			whileHover={{ y: -2, scale: 1.002 }}
+			transition={{ duration: 0.3, ease: "easeOut" }}
 			className={`bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-300 ${className}`}
 		>
 			{title && (
@@ -125,31 +135,53 @@ const BentoBox = ({
 				</div>
 			)}
 			<div className="p-6">{children}</div>
-		</div>
+		</motion.div>
 	);
 };
 
 /**
- * COMPONENT: Point Item Row (Updated for Vibrancy)
+ * COMPONENT: PointsRow (compact for Ecosystem section)
  */
-const PointItem = ({ label, points, icon: Icon, gradient }) => (
-	<div className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group">
+const PointsRow = ({ action, points, icon: Icon, color }) => (
+	<div className="flex items-center justify-between p-3 rounded-2xl bg-white border border-gray-100 shadow-sm">
 		<div className="flex items-center gap-3">
-			<div
-				className={`p-2 rounded-lg bg-gradient-to-br ${gradient} text-white shadow-sm`}
+			<span
+				className={`w-9 h-9 rounded-xl ${color} text-white flex items-center justify-center`}
 			>
 				<Icon size={16} />
-			</div>
-			<span className="text-sm font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
-				{label}
 			</span>
+			<span className="text-sm font-semibold text-gray-900">{action}</span>
 		</div>
-		<div className="flex items-center gap-1">
-			<span className="text-sm font-bold text-gray-900">+{points}</span>
-			<Zap className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-		</div>
+		<span className="text-sm font-bold text-emerald-700">{points} pts</span>
 	</div>
 );
+
+/**
+ * COMPONENT: Points Rule Row (for compact Points Flow in bento)
+ */
+const PointsRuleRow = ({ item, tone }) => {
+	const chipBg =
+		tone === "viewer"
+			? "bg-blue-50 text-blue-600"
+			: "bg-emerald-50 text-emerald-600";
+	return (
+		<div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
+			<div className="flex items-center gap-2">
+				<div className={`p-2 rounded-lg ${chipBg}`}>
+					<item.icon className="w-4 h-4" />
+				</div>
+				<div className="min-w-0">
+					<p className="text-sm font-semibold text-gray-900">{item.label}</p>
+					<p className="text-[11px] text-gray-500">{item.trigger}</p>
+				</div>
+			</div>
+			<div className="text-right text-[12px] font-bold space-y-0.5">
+				<div className="text-emerald-700">{item.earn} pts</div>
+				<div className="text-rose-600">{item.loss} pts</div>
+			</div>
+		</div>
+	);
+};
 
 /**
  * COMPONENT: Leaderboard Item (With Motion)
@@ -194,7 +226,6 @@ const LeaderboardItem = ({ user, isCurrentUser, rank, prevRank }) => {
 				}
       `}
 		>
-			{/* Rank Indicator */}
 			<div
 				className={`flex items-center justify-center w-10 h-10 rounded-xl font-bold text-sm shadow-sm transition-transform group-hover:scale-110 relative ${rankStyle}`}
 			>
@@ -209,7 +240,6 @@ const LeaderboardItem = ({ user, isCurrentUser, rank, prevRank }) => {
 				)}
 			</div>
 
-			{/* Avatar */}
 			<div className="relative">
 				<img
 					src={
@@ -228,7 +258,6 @@ const LeaderboardItem = ({ user, isCurrentUser, rank, prevRank }) => {
 				)}
 			</div>
 
-			{/* User Info */}
 			<div className="flex-1 min-w-0">
 				<h4
 					className={`font-bold truncate ${
@@ -249,7 +278,6 @@ const LeaderboardItem = ({ user, isCurrentUser, rank, prevRank }) => {
 				</div>
 			</div>
 
-			{/* Stats */}
 			<div className="text-right">
 				<div className="flex items-center justify-end gap-1.5 mb-0.5">
 					<div className="bg-yellow-100 p-1 rounded-full">
@@ -280,10 +308,8 @@ const Leaderboard = ({ showFull = false, timeFrame }) => {
 	const [currentUserRank, setCurrentUserRank] = useState(null);
 	const currentUser = auth.currentUser;
 
-	// Store previous ranks to detect changes
 	const updateRankings = (newRankings) => {
 		const prevMap = {};
-		// If we have existing rankings, map them by userId -> rank
 		if (rankings.length > 0) {
 			rankings.forEach((r) => {
 				prevMap[r.userId] = r.rank;
@@ -297,12 +323,9 @@ const Leaderboard = ({ showFull = false, timeFrame }) => {
 		let isMounted = true;
 
 		const fetchData = async () => {
-			// Don't show loading spinner on background refreshes if we already have data
 			if (rankings.length === 0) setLoading(true);
 
 			try {
-				// We pass timeFrame to the service, though the mock service might ignore it
-				// This sets up the frontend for the feature
 				const rankedUsers = await calculateLeaderboard(
 					showFull ? 100 : 10,
 					timeFrame
@@ -328,9 +351,7 @@ const Leaderboard = ({ showFull = false, timeFrame }) => {
 
 		fetchData();
 
-		// Live Auto-Refresh every 30 seconds
 		const interval = setInterval(fetchData, 30000);
-
 		return () => {
 			isMounted = false;
 			clearInterval(interval);
@@ -345,14 +366,12 @@ const Leaderboard = ({ showFull = false, timeFrame }) => {
 
 	return (
 		<div className="space-y-6">
-			{/* Podium View */}
 			{hasPodium && (
 				<motion.div
 					initial={{ opacity: 0, scale: 0.9 }}
 					animate={{ opacity: 1, scale: 1 }}
 					className="grid grid-cols-3 gap-4 mb-8 items-end"
 				>
-					{/* 2nd Place */}
 					<div className="order-1 flex flex-col items-center">
 						<div className="relative mb-2">
 							<img
@@ -379,7 +398,6 @@ const Leaderboard = ({ showFull = false, timeFrame }) => {
 						</div>
 					</div>
 
-					{/* 1st Place */}
 					<div className="order-2 flex flex-col items-center -mt-8">
 						<div className="relative mb-3">
 							<Crown className="absolute -top-8 left-1/2 -translate-x-1/2 w-8 h-8 text-yellow-500 fill-yellow-500 animate-bounce" />
@@ -412,7 +430,6 @@ const Leaderboard = ({ showFull = false, timeFrame }) => {
 						</div>
 					</div>
 
-					{/* 3rd Place */}
 					<div className="order-3 flex flex-col items-center">
 						<div className="relative mb-2">
 							<img
@@ -441,7 +458,6 @@ const Leaderboard = ({ showFull = false, timeFrame }) => {
 				</motion.div>
 			)}
 
-			{/* List View with AnimatePresence for smooth transitions */}
 			<div className="flex flex-col gap-2 relative">
 				<AnimatePresence mode="popLayout">
 					{listToRender.length > 0 ? (
@@ -462,7 +478,6 @@ const Leaderboard = ({ showFull = false, timeFrame }) => {
 				</AnimatePresence>
 			</div>
 
-			{/* Sticky User Stat */}
 			{!showFull && currentUserRank && currentUserRank.rank > 10 && (
 				<motion.div
 					initial={{ y: 50, opacity: 0 }}
@@ -503,23 +518,27 @@ const LeaderboardPage = () => {
 	const [timeFrame, setTimeFrame] = useState("weekly"); // 'weekly' | 'monthly'
 
 	return (
-		<div className="min-h-screen bg-[#F5F7F5] text-gray-900 font-sans selection:bg-[#335833] selection:text-white pb-12">
-			{/* Background Decor */}
+		<div className="min-h-screen bg-[#F5F7F5] text-gray-900 font-sans selection:bg-[#335833] selection:text-white pb-0">
 			<div className="fixed top-0 left-0 w-full h-96 bg-gradient-to-b from-[#335833]/10 to-transparent pointer-events-none" />
 
 			<div className="container mx-auto max-w-6xl px-4 py-8 relative z-10">
-				{/* Header & Toggle */}
 				<div className="flex flex-col md:flex-row justify-between items-center mb-10 mt-8 gap-6">
-					<div className="text-center md:text-left">
-						<h5 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight mb-3">
+					<div className="text-center md:text-left space-y-3">
+						<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 border border-emerald-200 text-[#335833] text-xs font-bold uppercase tracking-wider">
+							<span className="relative flex h-2 w-2">
+								<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+								<span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+							</span>
+							Live, auto-refreshing
+						</div>
+						<h5 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
 							Community <span className="text-[#335833]">Leaderboard</span>
 						</h5>
 						<p className="text-lg text-gray-600 max-w-2xl">
-							Climb the ranks and win exclusive cash prizes.
+							Climb the ranks, track your momentum, and win cash prizes.
 						</p>
 					</div>
 
-					{/* Time Frame Toggle */}
 					<div className="bg-white p-1.5 rounded-2xl shadow-sm border border-gray-200 flex items-center">
 						<button
 							onClick={() => setTimeFrame("weekly")}
@@ -544,21 +563,15 @@ const LeaderboardPage = () => {
 					</div>
 				</div>
 
-				{/* BENTO GRID LAYOUT */}
 				<div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-					{/* LEFT COLUMN: Leaderboard List (Span 8) */}
 					<div className="lg:col-span-7 xl:col-span-8 space-y-6">
 						<div className="bg-white rounded-[2.5rem] shadow-sm border border-white/50 p-6 md:p-8 backdrop-blur-xl relative overflow-hidden">
-							{/* Background accent for card */}
 							<div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#335833]/5 to-transparent rounded-bl-[100%] pointer-events-none" />
-
 							<Leaderboard showFull={true} timeFrame={timeFrame} />
 						</div>
 					</div>
 
-					{/* RIGHT COLUMN: Info & Stats (Span 4) */}
 					<div className="lg:col-span-5 xl:col-span-4 space-y-6 flex flex-col">
-						{/* Prize Pool Teaser */}
 						<BentoBox
 							className="bg-gradient-to-br from-yellow-50 via-white to-white border-yellow-100"
 							title="This Week's Pool"
@@ -578,74 +591,133 @@ const LeaderboardPage = () => {
 									<DollarSign className="w-6 h-6 text-yellow-600" />
 								</div>
 							</div>
-						</BentoBox>
-
-						{/* Creator Points Rules - VIBRANT REDESIGN */}
-						<BentoBox
-							title="Creator Rewards"
-							icon={Zap}
-							accentColor="text-indigo-600"
-							iconBgClass="bg-indigo-50"
-						>
-							<div className="space-y-2">
-								<PointItem
-									label="Create Blog Post"
-									points={150}
-									icon={Edit3}
-									gradient="from-violet-500 to-indigo-500"
-								/>
-								<PointItem
-									label="Create Social Post"
-									points={100}
-									icon={ImageIcon}
-									gradient="from-pink-500 to-rose-500"
-								/>
-								<PointItem
-									label="Get a Like"
-									points={10}
-									icon={Heart}
-									gradient="from-red-400 to-red-600"
-								/>
-								<PointItem
-									label="Get a Comment"
-									points={10}
-									icon={MessageCircle}
-									gradient="from-blue-400 to-blue-600"
-								/>
-								<PointItem
-									label="Post Shared"
-									points={10}
-									icon={Share2}
-									gradient="from-emerald-400 to-emerald-600"
-								/>
+							<div className="grid grid-cols-2 gap-3 mt-5 text-sm">
+								{[1, 2, 3, 4].map((r) => (
+									<div
+										key={r}
+										className="flex items-center justify-between bg-white rounded-2xl border border-yellow-100 px-3 py-2"
+									>
+										<span className="font-bold text-gray-700">{r}ᵗʰ</span>
+										<span className="text-yellow-700 font-semibold">
+											{PRIZES[r]?.label || "-"}
+										</span>
+									</div>
+								))}
 							</div>
 						</BentoBox>
 
-						{/* Viewer Points Rules */}
 						<BentoBox
-							title="Viewer Rewards"
+							title="Quick Tips"
 							icon={User}
 							accentColor="text-blue-600"
 							iconBgClass="bg-blue-600/10"
 						>
-							<div className="space-y-2">
-								<PointItem
-									label="Like a Post"
-									points={10}
-									icon={Heart}
-									gradient="from-blue-400 to-cyan-400"
-								/>
-								<PointItem
-									label="Comment"
-									points={10}
-									icon={MessageCircle}
-									gradient="from-cyan-500 to-teal-500"
-								/>
-							</div>
+							<ul className="space-y-2 text-sm text-gray-600">
+								<li>🚀 Stay active weekly to hold your spot.</li>
+								<li>✨ Likes and comments both earn and can be reversed.</li>
+								<li>🔔 Shares only add points—no loss on removal.</li>
+								<li>
+									📈 Check the badge beside your name to see if you’re rising.
+								</li>
+							</ul>
 						</BentoBox>
 					</div>
 				</div>
 			</div>
+
+			{/* --- Points Ecosystem Section --- */}
+			<section className="py-16 bg-white">
+				<div className="container mx-auto max-w-6xl px-4">
+					<div className="text-center mb-12">
+						<h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">
+							The <span className="text-[#335833]">Points Ecosystem</span>
+						</h2>
+						<p className="text-gray-600 max-w-2xl mx-auto">
+							Every interaction helps you climb the leaderboard. We believe in
+							fair play, so actions like deleting content will reverse the
+							points earned.
+						</p>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+						{/* Creator Column */}
+						<div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
+							<h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+								<span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+									<Camera size={16} />
+								</span>
+								Earn as a Creator
+							</h3>
+							<div className="space-y-3">
+								<PointsRow
+									action="Publish a Blog"
+									points="+150"
+									icon={PenLine}
+									color="bg-purple-500"
+								/>
+								<PointsRow
+									action="Upload Photo + Audio"
+									points="+100"
+									icon={Camera}
+									color="bg-blue-500"
+								/>
+								<PointsRow
+									action="Receive a Like"
+									points="+10"
+									icon={Heart}
+									color="bg-red-500"
+								/>
+								<PointsRow
+									action="Receive a Comment"
+									points="+10"
+									icon={MessageCircle}
+									color="bg-orange-500"
+								/>
+								<PointsRow
+									action="Post gets Shared"
+									points="+10"
+									icon={Share2}
+									color="bg-indigo-500"
+								/>
+							</div>
+						</div>
+
+						{/* Viewer Column */}
+						<div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
+							<h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+								<span className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+									<Users size={16} />
+								</span>
+								Earn as a Viewer
+							</h3>
+							<div className="space-y-3">
+								<PointsRow
+									action="Like a Post"
+									points="+10"
+									icon={Heart}
+									color="bg-red-500"
+								/>
+								<PointsRow
+									action="Comment on a Post"
+									points="+10"
+									icon={MessageCircle}
+									color="bg-orange-500"
+								/>
+							</div>
+							<div className="mt-8 p-4 bg-red-50 rounded-xl border border-red-100">
+								<p className="text-sm text-red-600 font-semibold mb-1">
+									Warning: Points Reversal
+								</p>
+								<p className="text-sm text-red-500 leading-relaxed">
+									Deleting a post removes all points earned from it (including
+									engagement points). Unliking or deleting a comment also
+									deducts the points originally awarded.
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
 		</div>
 	);
 };

@@ -446,7 +446,8 @@ const About = () => {
 						/>
 						<FAQItem
 							question="What can I do with my points?"
-							answer="Points determine your standing on the Wildlife Valparai Leaderboard. This isn't just for show—top-ranking creators and contributors are eligible for monthly cash prizes and special recognition within our conservation community."
+							answer="Points determine your standing on the Wildlife Valparai Leaderboard. This isn't just for show—top-ranking creators and contributors are eligible for monthly cash prizes
+							 and special recognition within our conservation community."
 						/>
 					</motion.div>
 				</div>
