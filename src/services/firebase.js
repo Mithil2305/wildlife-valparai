@@ -11,7 +11,6 @@ import {
 } from "firebase/auth";
 import {
 	getFirestore,
-	// Core Firestore methods
 	doc,
 	getDoc,
 	setDoc,
@@ -33,7 +32,27 @@ import {
 
 // --- 1. Firebase Configuration ---
 // Get worker URL for fetching secure config
-const WORKER_URL = import.meta.env.VITE_WORKER_URL || "http://localhost:8787";
+const WORKER_URL = import.meta.env.VITE_WORKER_URL;
+
+const validateConfig = (config) => {
+	const requiredKeys = [
+		"apiKey",
+		"authDomain",
+		"projectId",
+		"storageBucket",
+		"messagingSenderId",
+		"appId",
+	];
+
+	const missing = requiredKeys.filter((key) => !config?.[key]);
+	if (missing.length) {
+		throw new Error(
+			`Firebase config missing: ${missing.join(", ")}. Check worker secrets and VITE_WORKER_URL.`,
+		);
+	}
+
+	return config;
+};
 
 // Firebase instances (will be initialized)
 let app = null;
@@ -56,7 +75,8 @@ const fetchFirebaseConfig = async () => {
 			throw new Error(`Failed to fetch config: ${response.status}`);
 		}
 
-		return await response.json();
+		const cfg = await response.json();
+		return validateConfig(cfg);
 	} catch (error) {
 		console.error("Error fetching Firebase config from worker:", error);
 		throw error;

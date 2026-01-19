@@ -60,3 +60,4 @@ dist-ssr
 worker/node_modules
 worker/.wrangler
 worker/wrangler.toml.backup
+.env*.local
