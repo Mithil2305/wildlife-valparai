@@ -116,7 +116,7 @@ const initializeFirebase = async () => {
 };
 
 /**
- * Get Firebase Auth instance (ensures initialization)
+ * Get Firebase Auth instance(ensures initialization)
  */
 const getFirebaseAuth = async () => {
 	await initializeFirebase();
