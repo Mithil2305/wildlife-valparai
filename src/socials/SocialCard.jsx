@@ -21,7 +21,7 @@ import { HiDotsHorizontal } from "react-icons/hi";
 const Waveform = ({ isPlaying }) => {
 	const bars = Array.from(
 		{ length: 40 }, // Increased bar count for full width
-		() => Math.floor(Math.random() * 60) + 20
+		() => Math.floor(Math.random() * 60) + 20,
 	);
 
 	return (
@@ -38,7 +38,7 @@ const Waveform = ({ isPlaying }) => {
 					}}
 				/>
 			))}
-			<style jsx>{`
+			<style>{`
 				@keyframes wave {
 					0%,
 					100% {
@@ -159,7 +159,7 @@ const SocialCard = ({ post, onUpdate }) => {
 			await toggleLike(
 				post.id,
 				currentUser.uid,
-				currentUser.displayName || "Anonymous"
+				currentUser.displayName || "Anonymous",
 			);
 			if (onUpdate) await onUpdate();
 		} catch (error) {
@@ -200,7 +200,7 @@ const SocialCard = ({ post, onUpdate }) => {
 				post.id,
 				currentUser.uid,
 				currentUser.displayName || "Anonymous",
-				newComment.trim()
+				newComment.trim(),
 			);
 
 			setNewComment("");
@@ -234,7 +234,7 @@ const SocialCard = ({ post, onUpdate }) => {
 							src={
 								post.creatorProfilePhoto ||
 								`https://ui-avatars.com/api/?name=${encodeURIComponent(
-									post.creatorUsername || "User"
+									post.creatorUsername || "User",
 								)}&background=random`
 							}
 							alt={post.creatorUsername}
@@ -254,8 +254,8 @@ const SocialCard = ({ post, onUpdate }) => {
 											day: "numeric",
 											hour: "numeric",
 											minute: "numeric",
-										}
-								  )
+										},
+									)
 								: "Just now"}
 						</p>
 					</div>
@@ -366,7 +366,7 @@ const SocialCard = ({ post, onUpdate }) => {
 									<div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden shrink-0 mt-0.5">
 										<img
 											src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-												comment.username || "User"
+												comment.username || "User",
 											)}&background=random`}
 											alt="avatar"
 											className="w-full h-full object-cover"

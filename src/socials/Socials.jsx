@@ -14,6 +14,12 @@ import {
 	AiFillCrown,
 } from "react-icons/ai";
 import { HiSparkles } from "react-icons/hi";
+import {
+	FaFacebookF,
+	FaInstagram,
+	FaWhatsapp,
+	FaYoutube,
+} from "react-icons/fa";
 
 // --- Left Sidebar Navigation Item ---
 const NavItem = ({ icon: Icon, label, active, onClick }) => (
@@ -61,10 +67,10 @@ const TopCreatorsWidget = () => {
 									index === 0
 										? "bg-yellow-400"
 										: index === 1
-										? "bg-gray-400"
-										: index === 2
-										? "bg-orange-400"
-										: "bg-gray-200 text-gray-600"
+											? "bg-gray-400"
+											: index === 2
+												? "bg-orange-400"
+												: "bg-gray-200 text-gray-600"
 								}`}
 							>
 								{index === 0 ? <AiFillCrown /> : `#${index + 1}`}
@@ -75,7 +81,7 @@ const TopCreatorsWidget = () => {
 										src={
 											user.profilePhotoUrl ||
 											`https://ui-avatars.com/api/?name=${encodeURIComponent(
-												user.name
+												user.name,
 											)}&background=random`
 										}
 										alt={user.name}
@@ -160,7 +166,7 @@ const Socials = () => {
 			const socialPosts = allPosts.filter((post) => post.type === "photoAudio");
 			// Sort by newest first
 			socialPosts.sort(
-				(a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()
+				(a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis(),
 			);
 			setPosts(socialPosts);
 		} catch (error) {
@@ -170,6 +176,16 @@ const Socials = () => {
 			setLoading(false);
 		}
 	};
+	const SocialLink = ({ icon: Icon, href, color }) => (
+		<a
+			href={href}
+			target="_blank"
+			rel="noopener noreferrer"
+			className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all duration-300 hover:scale-110 ${color}`}
+		>
+			<Icon size={20} />
+		</a>
+	);
 
 	const loadMore = () => setDisplayCount((prev) => prev + 5);
 
@@ -260,6 +276,37 @@ const Socials = () => {
 								: toast("Only creators can upload content!")
 						}
 					/>
+					<div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-5">
+						{/* Social Media Links */}
+
+						<h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+							<span className="w-2 h-2 rounded-full bg-green-500"></span>
+							Follow Us
+						</h3>
+						<div className="flex flex-wrap gap-3">
+							<SocialLink
+								icon={FaInstagram}
+								href="https://www.instagram.com/wildlife_valparai"
+								color="text-pink-600 bg-pink-50 hover:bg-pink-100"
+							/>
+							<SocialLink
+								icon={FaFacebookF}
+								href="https://www.facebook.com/profile.php?id=100070562311839"
+								color="text-blue-600 bg-blue-50 hover:bg-blue-100"
+							/>
+							<SocialLink
+								icon={FaYoutube}
+								href="https://www.youtube.com/@wildlife.valparai"
+								color="text-red-600 bg-red-50 hover:bg-red-100"
+							/>
+
+							<SocialLink
+								icon={FaWhatsapp}
+								href="https://whatsapp.com"
+								color="text-green-600 bg-green-50 hover:bg-green-100"
+							/>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
