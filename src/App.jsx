@@ -8,6 +8,7 @@ import Footer from "./components/Footer.jsx";
 import Home from "./components/Home.jsx";
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
 import NotFound from "./components/NotFound.jsx";
+import ScrollToTop from "./components/ScrollToTop.jsx";
 
 // --- Auth Components ---
 import Login from "./components/Login.jsx";
@@ -92,6 +93,7 @@ const App = () => {
 	return (
 		// The <BrowserRouter> is in main.jsx, so this works
 		<main className="flex flex-col min-h-screen">
+			<ScrollToTop />
 			<Toaster position="top-center" reverseOrder={false} />{" "}
 			{/* Add Toaster here */}
 			<Navbar />
