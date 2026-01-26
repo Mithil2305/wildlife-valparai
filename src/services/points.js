@@ -6,6 +6,7 @@ import {
 	doc,
 	runTransaction,
 } from "./firebase";
+import { invalidateLeaderboardCache } from "./leaderboard";
 
 /**
  * Apply points to a user in a SAFE atomic transaction.
@@ -33,7 +34,7 @@ export const applyPoints = async (userId, points, reason, meta = {}) => {
 
 			// Calculate new points value manually
 			const currentPoints = userSnap.data().points || 0;
-			const newPoints = currentPoints + points;
+			const newPoints = Math.max(0, currentPoints + points); // Prevent negative points
 
 			tx.update(userRef, {
 				points: newPoints,
@@ -47,6 +48,9 @@ export const applyPoints = async (userId, points, reason, meta = {}) => {
 				timestamp: serverTimestamp(),
 			});
 		});
+
+		// Invalidate leaderboard cache after points change
+		invalidateLeaderboardCache();
 	} catch (error) {
 		console.error("Error applying points:", error);
 	}

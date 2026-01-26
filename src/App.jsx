@@ -55,6 +55,7 @@ import { getAuthInstance, onAuthStateChanged } from "./services/firebase.js";
 import Favorites from "./socials/Favorites.jsx";
 import LeaderboardPage from "./components/LeaderboardPage.jsx";
 import Advertise from "./components/Advertise.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 // import CreateAdminTool from "./util/CreateAdminTool.jsx";
 
 /**
@@ -92,66 +93,68 @@ const App = () => {
 
 	return (
 		// The <BrowserRouter> is in main.jsx, so this works
-		<main className="flex flex-col min-h-screen">
-			<ScrollToTop />
-			<Toaster position="top-center" reverseOrder={false} />{" "}
-			{/* Add Toaster here */}
-			<Navbar />
-			<div className="grow">
-				<Routes>
-					{/* --- Public Routes --- */}
-					<Route path="/" element={<Home />} />
-					<Route path="/login" element={<Login />} />
-					<Route path="/register" element={<Register />} />
-					<Route path="/about" element={<About />} />
-					<Route path="/contact" element={<Contact />} />
-					<Route path="/leaderboard" element={<LeaderboardPage />} />
-					<Route path="/sponsor" element={<Sponsor />} />
-					<Route path="/advertise" element={<Advertise />} />
+		<ErrorBoundary>
+			<main className="flex flex-col min-h-screen">
+				<ScrollToTop />
+				<Toaster position="top-center" reverseOrder={false} />{" "}
+				{/* Add Toaster here */}
+				<Navbar />
+				<div className="grow">
+					<Routes>
+						{/* --- Public Routes --- */}
+						<Route path="/" element={<Home />} />
+						<Route path="/login" element={<Login />} />
+						<Route path="/register" element={<Register />} />
+						<Route path="/about" element={<About />} />
+						<Route path="/contact" element={<Contact />} />
+						<Route path="/leaderboard" element={<LeaderboardPage />} />
+						<Route path="/sponsor" element={<Sponsor />} />
+						<Route path="/advertise" element={<Advertise />} />
 
-					{/* Blog Routes */}
-					<Route path="/blogs/manage" element={<ManageBlogs />} />
-					<Route path="/blog/:postId" element={<BlogDetail />} />
-					<Route path="/blog/edit/:postId" element={<EditBlog />} />
+						{/* Blog Routes */}
+						<Route path="/blogs/manage" element={<ManageBlogs />} />
+						<Route path="/blog/:postId" element={<BlogDetail />} />
+						<Route path="/blog/edit/:postId" element={<EditBlog />} />
 
-					{/* Socials Routes */}
-					<Route path="/socials" element={<Socials />} />
-					<Route path="/socials/:postId" element={<PostDetail />} />
-					<Route path="/socials/favorites" element={<Favorites />} />
+						{/* Socials Routes */}
+						<Route path="/socials" element={<Socials />} />
+						<Route path="/socials/:postId" element={<PostDetail />} />
+						<Route path="/socials/favorites" element={<Favorites />} />
 
-					{/* Legal Routes */}
-					<Route path="/legal/disclaimer" element={<Disclaimer />} />
-					<Route path="/legal/privacy" element={<PrivacyPolicy />} />
-					<Route
-						path="/legal/terms-and-conditions"
-						element={<TermsAndConditions />}
-					/>
+						{/* Legal Routes */}
+						<Route path="/legal/disclaimer" element={<Disclaimer />} />
+						<Route path="/legal/privacy" element={<PrivacyPolicy />} />
+						<Route
+							path="/legal/terms-and-conditions"
+							element={<TermsAndConditions />}
+						/>
 
-					{/* --- Protected Routes (Require Login) --- */}
-					<Route element={<ProtectedRoute user={currentUser} />}>
-						<Route path="/profile" element={<Profile />} />{" "}
-						{/* Add the Profile route */}
-						{/* Creator Dashboard & Actions */}
-						<Route path="/dashboard/creator" element={<CreatorDashboard />} />
-						<Route path="/upload/content" element={<UploadContent />} />
-						<Route path="/upload/blog" element={<CreateBlog />} />
-						<Route path="/socials/manage" element={<ManageSocial />} />
-						{/* General User Features */}
-						<Route path="/points" element={<Points />} />
-						<Route path="/points/history" element={<PointsHistory />} />
-						<Route path="/payments/history" element={<PaymentHistory />} />
-						{/* Admin Dashboard & Actions */}
-						<Route path="/dashboard/admin" element={<AdminDashboard />} />
-						<Route path="/admin/payments" element={<AdminPayments />} />
-					</Route>
+						{/* --- Protected Routes (Require Login) --- */}
+						<Route element={<ProtectedRoute user={currentUser} />}>
+							<Route path="/profile" element={<Profile />} />{" "}
+							{/* Add the Profile route */}
+							{/* Creator Dashboard & Actions */}
+							<Route path="/dashboard/creator" element={<CreatorDashboard />} />
+							<Route path="/upload/content" element={<UploadContent />} />
+							<Route path="/upload/blog" element={<CreateBlog />} />
+							<Route path="/socials/manage" element={<ManageSocial />} />
+							{/* General User Features */}
+							<Route path="/points" element={<Points />} />
+							<Route path="/points/history" element={<PointsHistory />} />
+							<Route path="/payments/history" element={<PaymentHistory />} />
+							{/* Admin Dashboard & Actions */}
+							<Route path="/dashboard/admin" element={<AdminDashboard />} />
+							<Route path="/admin/payments" element={<AdminPayments />} />
+						</Route>
 
-					{/* --- Not Found Route --- */}
-					<Route path="*" element={<NotFound />} />
-					{/* <Route path="/adminlogin" element={<CreateAdminTool />} /> */}
-				</Routes>
-			</div>
-			<Footer />
-		</main>
+						{/* --- Not Found Route --- */}
+						<Route path="*" element={<NotFound />} />
+						{/* <Route path="/adminlogin" element={<CreateAdminTool />} /> */}
+					</Routes>
+				</div>
+				<Footer />
+			</main>
+		</ErrorBoundary>
 	);
 };
 
