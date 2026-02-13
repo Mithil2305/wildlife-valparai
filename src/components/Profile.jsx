@@ -8,6 +8,11 @@ import {
 } from "../services/firebase.js";
 import { uploadSingleFile } from "../services/r2Upload.js";
 import { updateUserProfile, signOut } from "../services/authApi.js";
+import {
+	submitUpgradeTicket,
+	getUserTicketStatus,
+	TICKET_STATUS,
+} from "../services/ticketApi.js";
 import LoadingSpinner from "./LoadingSpinner.jsx";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -63,7 +68,7 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 				newPhotoUrl = await uploadSingleFile(
 					profileImageFile,
 					auth.currentUser.uid,
-					"profile"
+					"profile",
 				);
 			}
 
@@ -126,7 +131,7 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 									src={
 										imagePreview ||
 										`https://ui-avatars.com/api/?name=${encodeURIComponent(
-											user.name || user.username || "User"
+											user.name || user.username || "User",
 										)}&size=128&background=335833&color=fff`
 									}
 									alt="Preview"
@@ -237,6 +242,9 @@ const Profile = () => {
 	const [user, setUser] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+	const [ticketStatus, setTicketStatus] = useState(null); // null | { status, ... }
+	const [upgradeMessage, setUpgradeMessage] = useState("");
+	const [submittingTicket, setSubmittingTicket] = useState(false);
 	const navigate = useNavigate();
 
 	useEffect(() => {
@@ -247,7 +255,14 @@ const Profile = () => {
 					const userRef = await getUserDoc(currentUser.uid);
 					const userSnap = await getDoc(userRef);
 					if (userSnap.exists()) {
-						setUser(userSnap.data());
+						const userData = userSnap.data();
+						setUser(userData);
+
+						// Check ticket status for viewers
+						if (userData.accountType === "viewer") {
+							const ticket = await getUserTicketStatus(currentUser.uid);
+							setTicketStatus(ticket);
+						}
 					} else {
 						toast.error("Profile not found.");
 						navigate("/");
@@ -302,7 +317,7 @@ const Profile = () => {
 											src={
 												user.profilePhotoUrl ||
 												`https://ui-avatars.com/api/?name=${encodeURIComponent(
-													user.name || user.username || "User"
+													user.name || user.username || "User",
 												)}&size=128&background=335833&color=fff`
 											}
 											alt={user.name || "User"}
@@ -369,8 +384,8 @@ const Profile = () => {
 											user.accountType === "creator"
 												? "bg-green-100 text-green-700"
 												: user.accountType === "admin"
-												? "bg-purple-100 text-purple-700"
-												: "bg-blue-100 text-blue-700"
+													? "bg-purple-100 text-purple-700"
+													: "bg-blue-100 text-blue-700"
 										}`}
 									>
 										<FaUserShield size={24} />
@@ -471,16 +486,85 @@ const Profile = () => {
 											Share your wildlife photography and blogs with the world.
 											Earn points and win prizes.
 										</p>
-										<button
-											onClick={() =>
-												toast("Application system coming soon!", {
-													icon: "🚧",
-												})
-											}
-											className="px-5 py-2 bg-white text-gray-900 font-bold rounded-lg hover:bg-gray-100 transition-colors text-sm"
-										>
-											Apply Now
-										</button>
+
+										{/* No ticket or rejected - show form */}
+										{(!ticketStatus ||
+											ticketStatus.status === TICKET_STATUS.REJECTED) && (
+											<div className="space-y-3">
+												{ticketStatus?.status === TICKET_STATUS.REJECTED && (
+													<div className="p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-sm text-red-200">
+														<span className="font-bold">
+															Previous request rejected:
+														</span>{" "}
+														{ticketStatus.rejectionReason || "No reason given"}
+													</div>
+												)}
+												<textarea
+													value={upgradeMessage}
+													onChange={(e) => setUpgradeMessage(e.target.value)}
+													placeholder="Tell us why you'd like to become a creator (optional)..."
+													maxLength={1000}
+													rows={3}
+													className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 text-sm resize-none focus:ring-2 focus:ring-white/30 focus:border-white/30 outline-none"
+												/>
+												<button
+													onClick={async () => {
+														const auth = getAuthInstance();
+														const uid = auth?.currentUser?.uid;
+														if (!uid) {
+															toast.error("Please log in");
+															return;
+														}
+														setSubmittingTicket(true);
+														try {
+															await submitUpgradeTicket(uid, upgradeMessage);
+															const ticket = await getUserTicketStatus(uid);
+															setTicketStatus(ticket);
+															setUpgradeMessage("");
+															toast.success(
+																"Upgrade request submitted! Please wait for admin approval.",
+															);
+														} catch (error) {
+															toast.error(
+																error.message || "Failed to submit request",
+															);
+														} finally {
+															setSubmittingTicket(false);
+														}
+													}}
+													disabled={submittingTicket}
+													className="px-5 py-2 bg-white text-gray-900 font-bold rounded-lg hover:bg-gray-100 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+												>
+													{submittingTicket ? "Submitting..." : "Apply Now"}
+												</button>
+											</div>
+										)}
+
+										{/* Pending ticket */}
+										{ticketStatus?.status === TICKET_STATUS.PENDING && (
+											<div className="p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-xl">
+												<div className="flex items-center gap-2 text-yellow-200 font-bold text-sm mb-1">
+													⏳ Application Pending
+												</div>
+												<p className="text-gray-300 text-sm">
+													Your creator upgrade request is being reviewed by an
+													admin. You&apos;ll be upgraded once approved.
+												</p>
+											</div>
+										)}
+
+										{/* Approved ticket */}
+										{ticketStatus?.status === TICKET_STATUS.APPROVED && (
+											<div className="p-4 bg-green-500/20 border border-green-500/30 rounded-xl">
+												<div className="flex items-center gap-2 text-green-200 font-bold text-sm mb-1">
+													✅ Application Approved!
+												</div>
+												<p className="text-gray-300 text-sm">
+													Your account has been upgraded. Please refresh the
+													page to see the changes.
+												</p>
+											</div>
+										)}
 									</div>
 								</div>
 							)}

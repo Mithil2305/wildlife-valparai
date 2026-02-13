@@ -213,6 +213,26 @@ const getSponsorDoc = async (sponsorId) => {
 	return doc(database, "sponsors", sponsorId);
 };
 
+const getReportsCollection = async (postId) => {
+	const database = await getFirebaseDb();
+	return collection(database, "posts", postId, "reports");
+};
+
+const getReportDoc = async (postId, userId) => {
+	const database = await getFirebaseDb();
+	return doc(database, "posts", postId, "reports", userId);
+};
+
+const getTicketsCollection = async () => {
+	const database = await getFirebaseDb();
+	return collection(database, "tickets");
+};
+
+const getTicketDoc = async (ticketId) => {
+	const database = await getFirebaseDb();
+	return doc(database, "tickets", ticketId);
+};
+
 // --- 3. Export Core Services ---
 export {
 	// Initialization (MUST be called at app startup)
@@ -261,6 +281,10 @@ export {
 	getPaymentDoc,
 	getSponsorsCollection,
 	getSponsorDoc,
+	getReportsCollection,
+	getReportDoc,
+	getTicketsCollection,
+	getTicketDoc,
 };
 
 // Legacy getters for backward compatibility

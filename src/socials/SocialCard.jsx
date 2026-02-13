@@ -15,7 +15,7 @@ import {
 	AiOutlineMessage,
 	AiOutlineSend,
 } from "react-icons/ai";
-import { HiDotsHorizontal } from "react-icons/hi";
+import ReportButton from "../components/ReportButton.jsx";
 
 // Waveform Animation Component
 const Waveform = ({ isPlaying }) => {
@@ -260,9 +260,7 @@ const SocialCard = ({ post, onUpdate }) => {
 						</p>
 					</div>
 				</div>
-				<button className="text-gray-400 hover:text-gray-600">
-					<HiDotsHorizontal size={20} />
-				</button>
+				<ReportButton postId={post.id} userId={currentUser?.uid} />
 			</div>
 
 			{/* 2. Caption */}

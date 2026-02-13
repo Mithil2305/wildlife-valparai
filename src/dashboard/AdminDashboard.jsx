@@ -14,6 +14,13 @@ import {
 	HiX,
 	HiTrendingUp,
 	HiQrcode,
+	HiFlag,
+	HiTicket,
+	HiRefresh,
+	HiEye,
+	HiBan,
+	HiCheckCircle,
+	HiXCircle,
 } from "react-icons/hi";
 import { toast } from "react-hot-toast";
 import {
@@ -21,6 +28,7 @@ import {
 	getUsersCollection,
 	getPostsCollection,
 	getSponsorsCollection,
+	getAuthInstance,
 } from "../services/firebase.js";
 import {
 	getDocs,
@@ -32,6 +40,17 @@ import {
 } from "firebase/firestore";
 import { calculateLeaderboard } from "../services/leaderboard.js";
 import { createPayment } from "../services/payments.js";
+import {
+	getAllReportedPosts,
+	getPostReports,
+	adminRestorePost,
+	adminPermanentDelete,
+} from "../services/reportApi.js";
+import {
+	getAllTickets,
+	approveTicket,
+	rejectTicket,
+} from "../services/ticketApi.js";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 
 // --- Components ---
@@ -228,6 +247,13 @@ const AdminDashboard = () => {
 	const [socials, setSocials] = useState([]);
 	const [sponsors, setSponsors] = useState([]);
 	const [selectedUser, setSelectedUser] = useState(null);
+	const [reportedPosts, setReportedPosts] = useState([]);
+	const [tickets, setTickets] = useState([]);
+	const [rejectReason, setRejectReason] = useState("");
+	const [rejectingTicketId, setRejectingTicketId] = useState(null);
+
+	const auth = getAuthInstance();
+	const adminId = auth?.currentUser?.uid;
 
 	// Fetch Data
 	useEffect(() => {
@@ -250,7 +276,7 @@ const AdminDashboard = () => {
 
 				// Sort by date desc
 				allPosts.sort(
-					(a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+					(a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0),
 				);
 
 				const blogPosts = allPosts.filter((p) => p.type === "blog");
@@ -277,6 +303,14 @@ const AdminDashboard = () => {
 				// 5. Fetch Leaderboard for Payouts
 				const leaderboardData = await calculateLeaderboard(50);
 				setCreators(leaderboardData);
+
+				// 6. Fetch Reported Posts
+				const reported = await getAllReportedPosts();
+				setReportedPosts(reported);
+
+				// 7. Fetch Upgrade Tickets
+				const allTickets = await getAllTickets();
+				setTickets(allTickets);
 			} catch (error) {
 				console.error("Error fetching admin data:", error);
 				toast.error("Failed to load dashboard data");
@@ -291,7 +325,7 @@ const AdminDashboard = () => {
 	const handleDelete = async (collectionRef, id, type) => {
 		if (
 			!window.confirm(
-				"Are you sure you want to delete this content permanently?"
+				"Are you sure you want to delete this content permanently?",
 			)
 		)
 			return;
@@ -326,6 +360,89 @@ const AdminDashboard = () => {
 		} catch (err) {
 			console.error(err);
 			toast.error("Failed to add sponsor");
+		}
+	};
+
+	// --- Report Handlers ---
+	const handleRestorePost = async (postId) => {
+		if (!window.confirm("Restore this post and clear all reports?")) return;
+		try {
+			await adminRestorePost(postId);
+			setReportedPosts(reportedPosts.filter((p) => p.id !== postId));
+			toast.success("Post restored successfully");
+		} catch (error) {
+			console.error(error);
+			toast.error("Failed to restore post");
+		}
+	};
+
+	const handlePermanentDelete = async (postId) => {
+		if (
+			!window.confirm(
+				"Permanently delete this post? This action cannot be undone.",
+			)
+		)
+			return;
+		try {
+			await adminPermanentDelete(postId);
+			setReportedPosts(reportedPosts.filter((p) => p.id !== postId));
+			toast.success("Post permanently deleted");
+		} catch (error) {
+			console.error(error);
+			toast.error("Failed to delete post");
+		}
+	};
+
+	const handleViewReports = async (postId) => {
+		try {
+			const reports = await getPostReports(postId);
+			const reasons = reports.map(
+				(r) => `• ${r.reason}${r.details ? ` — "${r.details}"` : ""}`,
+			);
+			alert(`Reports for this post:\n\n${reasons.join("\n")}`);
+		} catch (error) {
+			console.error(error);
+			toast.error("Failed to load reports");
+		}
+	};
+
+	// --- Ticket Handlers ---
+	const handleApproveTicket = async (ticketId) => {
+		if (!window.confirm("Approve this creator upgrade request?")) return;
+		try {
+			await approveTicket(ticketId, adminId);
+			setTickets(
+				tickets.map((t) =>
+					t.id === ticketId ? { ...t, status: "approved" } : t,
+				),
+			);
+			toast.success("Creator upgrade approved!");
+		} catch (error) {
+			console.error(error);
+			toast.error("Failed to approve ticket");
+		}
+	};
+
+	const handleRejectTicket = async (ticketId) => {
+		if (!rejectReason.trim()) {
+			toast.error("Please provide a rejection reason");
+			return;
+		}
+		try {
+			await rejectTicket(ticketId, adminId, rejectReason);
+			setTickets(
+				tickets.map((t) =>
+					t.id === ticketId
+						? { ...t, status: "rejected", rejectionReason: rejectReason }
+						: t,
+				),
+			);
+			setRejectingTicketId(null);
+			setRejectReason("");
+			toast.success("Ticket rejected");
+		} catch (error) {
+			console.error(error);
+			toast.error("Failed to reject ticket");
 		}
 	};
 
@@ -376,6 +493,18 @@ const AdminDashboard = () => {
 					label="Sponsors"
 					isActive={activeTab === "sponsors"}
 					onClick={() => setActiveTab("sponsors")}
+				/>
+				<SidebarItem
+					icon={HiFlag}
+					label="Reported Content"
+					isActive={activeTab === "reports"}
+					onClick={() => setActiveTab("reports")}
+				/>
+				<SidebarItem
+					icon={HiTicket}
+					label="Upgrade Tickets"
+					isActive={activeTab === "tickets"}
+					onClick={() => setActiveTab("tickets")}
 				/>
 			</aside>
 
@@ -609,7 +738,7 @@ const AdminDashboard = () => {
 																handleDelete(
 																	getPostsCollection(),
 																	blog.id,
-																	"blog"
+																	"blog",
 																)
 															}
 															className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -661,7 +790,7 @@ const AdminDashboard = () => {
 														handleDelete(
 															getPostsCollection(),
 															post.id,
-															"social"
+															"social",
 														)
 													}
 													className="p-3 bg-white text-red-500 rounded-full hover:bg-red-50 shadow-lg transform hover:scale-110 transition-all"
@@ -719,7 +848,7 @@ const AdminDashboard = () => {
 												handleDelete(
 													getSponsorsCollection(),
 													sponsor.id,
-													"sponsor"
+													"sponsor",
 												)
 											}
 											className="absolute top-4 right-4 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
@@ -743,6 +872,292 @@ const AdminDashboard = () => {
 								{sponsors.length === 0 && (
 									<div className="col-span-full py-12 text-center text-gray-400 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
 										No active sponsors found.
+									</div>
+								)}
+							</div>
+						</motion.div>
+					)}
+
+					{/* REPORTED CONTENT TAB */}
+					{activeTab === "reports" && (
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							className="space-y-6"
+						>
+							<div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+								<div>
+									<h3 className="font-bold text-lg text-gray-900">
+										Reported Content
+									</h3>
+									<p className="text-sm text-gray-500">
+										Review and take action on reported posts (
+										{reportedPosts.length} total)
+									</p>
+								</div>
+								<button
+									onClick={async () => {
+										const reported = await getAllReportedPosts();
+										setReportedPosts(reported);
+										toast.success("Refreshed");
+									}}
+									className="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl text-sm hover:bg-gray-200 transition-colors flex items-center gap-2"
+								>
+									<HiRefresh /> Refresh
+								</button>
+							</div>
+
+							<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+								<div className="overflow-x-auto">
+									<table className="w-full text-left">
+										<thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold border-b border-gray-100">
+											<tr>
+												<th className="px-6 py-4">Content</th>
+												<th className="px-6 py-4">Type</th>
+												<th className="px-6 py-4">Creator</th>
+												<th className="px-6 py-4 text-center">Reports</th>
+												<th className="px-6 py-4 text-center">Status</th>
+												<th className="px-6 py-4 text-right">Actions</th>
+											</tr>
+										</thead>
+										<tbody className="divide-y divide-gray-100">
+											{reportedPosts.map((post) => (
+												<tr
+													key={post.id}
+													className={`hover:bg-gray-50 transition-colors ${post.hidden ? "bg-red-50/50" : ""}`}
+												>
+													<td className="px-6 py-4 font-medium text-gray-900 max-w-xs truncate">
+														{post.title || post.caption || "Untitled"}
+													</td>
+													<td className="px-6 py-4">
+														<span
+															className={`px-2 py-1 text-xs font-bold rounded-full ${post.type === "blog" ? "bg-purple-100 text-purple-700" : "bg-orange-100 text-orange-700"}`}
+														>
+															{post.type === "blog" ? "Blog" : "Social"}
+														</span>
+													</td>
+													<td className="px-6 py-4 text-sm text-gray-500">
+														{post.creatorUsername || "Unknown"}
+													</td>
+													<td className="px-6 py-4 text-center">
+														<span
+															className={`px-3 py-1 text-xs font-bold rounded-full ${(post.reportCount || 0) >= 20 ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}
+														>
+															{post.reportCount || 0}
+														</span>
+													</td>
+													<td className="px-6 py-4 text-center">
+														{post.hidden ? (
+															<span className="px-2 py-1 text-xs font-bold bg-red-100 text-red-600 rounded-full flex items-center gap-1 justify-center">
+																<HiBan size={12} /> Hidden
+															</span>
+														) : (
+															<span className="px-2 py-1 text-xs font-bold bg-green-100 text-green-600 rounded-full">
+																Visible
+															</span>
+														)}
+													</td>
+													<td className="px-6 py-4 text-right">
+														<div className="flex items-center justify-end gap-2">
+															<button
+																onClick={() => handleViewReports(post.id)}
+																className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+																title="View Reports"
+															>
+																<HiEye size={16} />
+															</button>
+															<button
+																onClick={() => handleRestorePost(post.id)}
+																className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+																title="Restore Post"
+															>
+																<HiRefresh size={16} />
+															</button>
+															<button
+																onClick={() => handlePermanentDelete(post.id)}
+																className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+																title="Delete Permanently"
+															>
+																<HiTrash size={16} />
+															</button>
+														</div>
+													</td>
+												</tr>
+											))}
+											{reportedPosts.length === 0 && (
+												<tr>
+													<td
+														colSpan="6"
+														className="px-6 py-12 text-center text-gray-400"
+													>
+														No reported content. All clear! 🎉
+													</td>
+												</tr>
+											)}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</motion.div>
+					)}
+
+					{/* UPGRADE TICKETS TAB */}
+					{activeTab === "tickets" && (
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							className="space-y-6"
+						>
+							<div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+								<div>
+									<h3 className="font-bold text-lg text-gray-900">
+										Creator Upgrade Requests
+									</h3>
+									<p className="text-sm text-gray-500">
+										Manage viewer to creator upgrade tickets
+									</p>
+								</div>
+								<button
+									onClick={async () => {
+										const allTix = await getAllTickets();
+										setTickets(allTix);
+										toast.success("Refreshed");
+									}}
+									className="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl text-sm hover:bg-gray-200 transition-colors flex items-center gap-2"
+								>
+									<HiRefresh /> Refresh
+								</button>
+							</div>
+
+							<div className="space-y-4">
+								{tickets.map((ticket) => (
+									<div
+										key={ticket.id}
+										className={`bg-white rounded-3xl shadow-sm border p-6 transition-shadow hover:shadow-md ${
+											ticket.status === "pending"
+												? "border-yellow-200"
+												: ticket.status === "approved"
+													? "border-green-200"
+													: "border-red-200"
+										}`}
+									>
+										<div className="flex items-start justify-between gap-4">
+											<div className="flex items-center gap-4">
+												<img
+													src={
+														ticket.profilePhotoUrl ||
+														`https://ui-avatars.com/api/?name=${ticket.userName}`
+													}
+													className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-sm"
+													alt=""
+												/>
+												<div>
+													<h4 className="font-bold text-gray-900">
+														{ticket.userName}
+													</h4>
+													<p className="text-sm text-gray-500">
+														@{ticket.username} • {ticket.userEmail}
+													</p>
+													{ticket.message && (
+														<p className="text-sm text-gray-600 mt-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+															"{ticket.message}"
+														</p>
+													)}
+													<p className="text-xs text-gray-400 mt-2">
+														Submitted:{" "}
+														{ticket.createdAt?.toDate
+															? new Date(
+																	ticket.createdAt.toDate(),
+																).toLocaleDateString("en-US", {
+																	month: "short",
+																	day: "numeric",
+																	year: "numeric",
+																	hour: "numeric",
+																	minute: "numeric",
+																})
+															: "Unknown"}
+													</p>
+												</div>
+											</div>
+
+											<div className="flex flex-col items-end gap-2">
+												{ticket.status === "pending" && (
+													<span className="px-3 py-1 text-xs font-bold bg-yellow-100 text-yellow-700 rounded-full">
+														Pending
+													</span>
+												)}
+												{ticket.status === "approved" && (
+													<span className="px-3 py-1 text-xs font-bold bg-green-100 text-green-700 rounded-full flex items-center gap-1">
+														<HiCheckCircle size={14} /> Approved
+													</span>
+												)}
+												{ticket.status === "rejected" && (
+													<span className="px-3 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-full flex items-center gap-1">
+														<HiXCircle size={14} /> Rejected
+													</span>
+												)}
+											</div>
+										</div>
+
+										{/* Action Buttons for Pending Tickets */}
+										{ticket.status === "pending" && (
+											<div className="mt-4 pt-4 border-t border-gray-100">
+												{rejectingTicketId === ticket.id ? (
+													<div className="flex items-center gap-3">
+														<input
+															type="text"
+															value={rejectReason}
+															onChange={(e) => setRejectReason(e.target.value)}
+															placeholder="Reason for rejection..."
+															className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-red-300 focus:border-red-300 outline-none"
+														/>
+														<button
+															onClick={() => handleRejectTicket(ticket.id)}
+															className="px-4 py-2 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-colors"
+														>
+															Confirm
+														</button>
+														<button
+															onClick={() => {
+																setRejectingTicketId(null);
+																setRejectReason("");
+															}}
+															className="px-4 py-2 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-colors"
+														>
+															Cancel
+														</button>
+													</div>
+												) : (
+													<div className="flex items-center gap-3">
+														<button
+															onClick={() => handleApproveTicket(ticket.id)}
+															className="px-5 py-2 bg-[#335833] text-white text-sm font-bold rounded-xl hover:bg-[#2a4a2a] transition-colors shadow-lg shadow-green-900/20 flex items-center gap-2"
+														>
+															<HiCheckCircle /> Approve
+														</button>
+														<button
+															onClick={() => setRejectingTicketId(ticket.id)}
+															className="px-5 py-2 bg-red-100 text-red-700 text-sm font-bold rounded-xl hover:bg-red-200 transition-colors flex items-center gap-2"
+														>
+															<HiXCircle /> Reject
+														</button>
+													</div>
+												)}
+											</div>
+										)}
+
+										{/* Show rejection reason */}
+										{ticket.status === "rejected" && ticket.rejectionReason && (
+											<div className="mt-3 p-3 bg-red-50 rounded-xl border border-red-100 text-sm text-red-700">
+												<span className="font-bold">Reason:</span>{" "}
+												{ticket.rejectionReason}
+											</div>
+										)}
+									</div>
+								))}
+								{tickets.length === 0 && (
+									<div className="py-12 text-center text-gray-400 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+										No upgrade tickets found.
 									</div>
 								)}
 							</div>

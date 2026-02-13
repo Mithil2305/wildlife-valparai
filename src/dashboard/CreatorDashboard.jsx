@@ -18,6 +18,7 @@ import {
 } from "react-icons/hi";
 import { getAuthInstance, getUserDoc, getDoc } from "../services/firebase.js";
 import { getCreatorPosts, deleteBlogPost } from "../services/uploadPost.js";
+import { getCreatorReportedPosts } from "../services/reportApi.js";
 import { calculateLeaderboard } from "../services/leaderboardService.js";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import toast from "react-hot-toast";
@@ -93,6 +94,7 @@ const CreatorDashboard = () => {
 	const [loading, setLoading] = useState(true);
 	const [userRank, setUserRank] = useState(null);
 	const [engagementScore, setEngagementScore] = useState(0);
+	const [reportedPosts, setReportedPosts] = useState([]);
 	const navigate = useNavigate();
 
 	useEffect(() => {
@@ -125,11 +127,11 @@ const CreatorDashboard = () => {
 
 					const totalLikes = creatorPosts.reduce(
 						(sum, post) => sum + (post.likeCount || 0),
-						0
+						0,
 					);
 					const totalComments = creatorPosts.reduce(
 						(sum, post) => sum + (post.commentCount || 0),
-						0
+						0,
 					);
 					const score =
 						creatorPosts.length * 10 + totalLikes * 2 + totalComments * 3;
@@ -137,11 +139,15 @@ const CreatorDashboard = () => {
 
 					const leaderboard = await calculateLeaderboard();
 					const rankIndex = leaderboard.findIndex(
-						(u) => u.userId === currentUser.uid
+						(u) => u.userId === currentUser.uid,
 					);
 					if (rankIndex !== -1) {
 						setUserRank(rankIndex + 1);
 					}
+
+					// Fetch reported posts for this creator
+					const reported = await getCreatorReportedPosts(currentUser.uid);
+					setReportedPosts(reported);
 				} catch (error) {
 					console.error("Error fetching data:", error);
 					toast.error("Failed to load dashboard data");
@@ -154,11 +160,11 @@ const CreatorDashboard = () => {
 
 	const totalLikes = posts.reduce(
 		(sum, post) => sum + (post.likeCount || 0),
-		0
+		0,
 	);
 	const totalComments = posts.reduce(
 		(sum, post) => sum + (post.commentCount || 0),
-		0
+		0,
 	);
 
 	const handleDelete = async (postId) => {
@@ -457,7 +463,7 @@ const CreatorDashboard = () => {
 														month: "short",
 														day: "numeric",
 														year: "numeric",
-													}
+													},
 												)}
 											</p>
 											{post.type === "blog" && (
@@ -498,6 +504,58 @@ const CreatorDashboard = () => {
 							</div>
 						)}
 					</FeatureCard>
+
+					{/* Reported Content Section (Read-Only) */}
+					{reportedPosts.length > 0 && (
+						<FeatureCard
+							title="⚠️ Reported Content"
+							description="Posts that have been flagged by community members"
+						>
+							<div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4 text-sm text-yellow-800">
+								<strong>Note:</strong> These posts have been reported by users.
+								Content with 20+ reports is automatically hidden. Please review
+								and wait for admin action.
+							</div>
+							<div className="space-y-3">
+								{reportedPosts.map((post) => (
+									<div
+										key={post.id}
+										className={`flex items-center justify-between p-4 rounded-xl border ${post.hidden ? "bg-red-50 border-red-200" : "bg-white border-gray-200"}`}
+									>
+										<div className="flex items-center gap-4 min-w-0">
+											{post.photoUrl && (
+												<img
+													src={post.photoUrl}
+													alt=""
+													className="w-12 h-12 rounded-lg object-cover shrink-0"
+												/>
+											)}
+											<div className="min-w-0">
+												<h4 className="font-bold text-gray-900 truncate">
+													{post.title || "Untitled Post"}
+												</h4>
+												<p className="text-xs text-gray-500">
+													{post.type === "blog" ? "Blog" : "Social"} •{" "}
+													{post.hidden ? "Hidden from feed" : "Still visible"}
+												</p>
+											</div>
+										</div>
+										<div className="flex items-center gap-3 shrink-0">
+											<span
+												className={`px-3 py-1 text-xs font-bold rounded-full ${
+													(post.reportCount || 0) >= 20
+														? "bg-red-100 text-red-700"
+														: "bg-yellow-100 text-yellow-700"
+												}`}
+											>
+												{post.reportCount || 0} reports
+											</span>
+										</div>
+									</div>
+								))}
+							</div>
+						</FeatureCard>
+					)}
 				</motion.div>
 			</div>
 		</div>

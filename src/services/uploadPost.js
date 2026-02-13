@@ -82,6 +82,8 @@ const createPost = async ({
 		likeCount: 0,
 		commentCount: 0,
 		shareCount: 0,
+		reportCount: 0,
+		hidden: false,
 		createdAt: serverTimestamp(),
 	});
 
@@ -89,7 +91,7 @@ const createPost = async ({
 		creatorId,
 		type === "blog" ? 150 : 100,
 		type === "blog" ? "Published blog" : "Uploaded photo + audio",
-		{ postId: postRef.id }
+		{ postId: postRef.id },
 	);
 
 	return postRef.id;
@@ -111,7 +113,7 @@ export const deleteBlogPost = async (postId) => {
 		post.creatorId,
 		-(baseLoss + engagementLoss),
 		"Post deleted",
-		{ postId }
+		{ postId },
 	);
 };
 
@@ -139,9 +141,13 @@ export const getPost = async (postId) => {
 
 export const getLatestPosts = async (count = 10) => {
 	const postsCol = await getPostsCollection();
-	const q = query(postsCol, orderBy("createdAt", "desc"), limit(count));
+	// Fetch extra to account for hidden posts filtered out
+	const q = query(postsCol, orderBy("createdAt", "desc"), limit(count + 10));
 	const snap = await getDocs(q);
-	return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+	return snap.docs
+		.map((d) => ({ id: d.id, ...d.data() }))
+		.filter((post) => !post.hidden)
+		.slice(0, count);
 };
 
 export const getCreatorPosts = async (creatorId) => {
@@ -157,7 +163,7 @@ export const getPostComments = async (postId) => {
 	const db = await getFirebaseDb();
 	const q = query(
 		collection(db, "posts", postId, "comments"),
-		orderBy("createdAt", "asc")
+		orderBy("createdAt", "asc"),
 	);
 	const snap = await getDocs(q);
 	return snap.docs.map((d) => ({ id: d.id, ...d.data() }));

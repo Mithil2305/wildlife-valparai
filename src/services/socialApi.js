@@ -22,7 +22,9 @@ import { applyPoints } from "./points";
 export const getAllPosts = async () => {
 	const postsCol = await getPostsCollection();
 	const snap = await getDocs(postsCol);
-	return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+	return snap.docs
+		.map((d) => ({ id: d.id, ...d.data() }))
+		.filter((post) => !post.hidden);
 };
 
 export const getUserLikedPosts = async (userId) => {

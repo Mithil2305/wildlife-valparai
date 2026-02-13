@@ -1,0 +1,166 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------- HELPERS ---------- */
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountType == "admin";
+    }
+
+    /* ---------- USERS ---------- */
+
+    match /users/{userId} {
+      allow read: if true;
+
+      allow create: if isOwner(userId)
+        && request.resource.data.email == request.auth.token.email;
+
+      // Profile updates (non-sensitive fields) - owner only
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['name', 'bio','upiId', 'profilePhotoUrl', 'phone']);
+
+      // Points updates - any authenticated user can update points
+      // Required for social actions (like/unlike) that award points to other users
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['points', 'lastPointsUpdate']);
+
+      // Admin can update accountType (for creator upgrade approval)
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['accountType']);
+
+      allow delete: if false;
+
+      /* ---- POINTS HISTORY ---- */
+      match /pointsHistory/{historyId} {
+        allow read: if isOwner(userId);
+        allow create: if isAuthenticated();
+      }
+
+      /* ---- PAYMENTS ---- */
+      match /transactionsReceived/{transactionId} {
+        allow read: if isOwner(userId);
+        allow write: if isAdmin();
+      }
+    }
+
+    /* ---------- POSTS ---------- */
+
+    match /posts/{postId} {
+      allow read: if true;
+
+      allow create: if isAuthenticated()
+        && request.resource.data.creatorId == request.auth.uid;
+
+      // Owner edits content only
+      // Engagement counters updated via actions
+      allow update: if isAuthenticated() && (
+        resource.data.creatorId == request.auth.uid ||
+        request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['likeCount', 'commentCount', 'shareCount'])
+      );
+
+      // Report system - any authenticated user can increment reportCount
+      // and auto-hide posts that exceed the threshold
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['reportCount', 'hidden']);
+
+      // Admin can restore posts (reset reportCount, unhide)
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['reportCount', 'hidden']);
+
+      allow delete: if resource.data.creatorId == request.auth.uid || isAdmin();
+
+      /* ---- LIKES ---- */
+      match /likes/{likeUserId} {
+        allow read: if true;
+        allow create, delete: if isOwner(likeUserId);
+      }
+
+      /* ---- COMMENTS ---- */
+      match /comments/{commentId} {
+        allow read: if true;
+
+        allow create: if isAuthenticated()
+          && request.resource.data.userId == request.auth.uid;
+
+        allow delete: if isAuthenticated() && (
+          resource.data.userId == request.auth.uid ||
+          get(/databases/$(database)/documents/posts/$(postId))
+            .data.creatorId == request.auth.uid
+        );
+      }
+
+      /* ---- REPORTS ---- */
+      match /reports/{reportUserId} {
+        // Anyone can read reports (needed for hasUserReported check)
+        allow read: if true;
+
+        // Users can only create their own report (doc ID = their UID)
+        allow create: if isOwner(reportUserId);
+
+        // Only admin can delete reports (during restore)
+        allow delete: if isAdmin();
+      }
+    }
+
+    /* ---------- USERNAMES ---------- */
+    match /usernames/{username} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+    }
+
+    /* ---------- PAYMENTS ---------- */
+    match /payments/{paymentId} {
+      allow read, write: if isAdmin();
+    }
+
+    /* ---------- SPONSORS ---------- */
+    match /sponsors/{sponsorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    /* ---------- TICKETS (Creator Upgrade Requests) ---------- */
+    match /tickets/{ticketId} {
+      // Users can read their own tickets, admin can read all
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+
+      // Any authenticated user can create a ticket for themselves
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      // Only admin can update tickets (approve/reject)
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['status', 'resolvedAt', 'resolvedBy', 'rejectionReason']);
+
+      allow delete: if false;
+    }
+  }
+}

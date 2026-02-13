@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getPost, getLatestPosts } from "../services/uploadPost.js";
+import { getAuthInstance } from "../services/firebase.js";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import Comments from "./Comments.jsx";
 import NotFound from "../components/NotFound.jsx";
@@ -8,6 +9,7 @@ import PopularPosts from "../components/PopularPosts.jsx";
 import AdContainer from "../components/AdContainer.jsx";
 import SocialShareButtons from "./SocialShareButtons.jsx";
 import BlogCard from "../components/BlogCard.jsx";
+import ReportButton from "../components/ReportButton.jsx";
 import {
 	FaChevronLeft,
 	FaChevronRight,
@@ -64,6 +66,8 @@ const BlogDetail = () => {
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const { postId } = useParams();
 	const postUrl = window.location.href;
+	const auth = getAuthInstance();
+	const currentUser = auth?.currentUser;
 
 	useEffect(() => {
 		const fetchPost = async () => {
@@ -121,7 +125,7 @@ const BlogDetail = () => {
 				year: "numeric",
 				month: "long",
 				day: "numeric",
-		  })
+			})
 		: "Unknown date";
 
 	return (
@@ -143,11 +147,14 @@ const BlogDetail = () => {
 								<span>{formattedDate}</span>
 							</div>
 
-							{/* Social Share Buttons */}
-							<SocialShareButtons
-								url={postUrl}
-								title={post.title || "Check out this post"}
-							/>
+							{/* Social Share Buttons & Report */}
+							<div className="flex items-center justify-between">
+								<SocialShareButtons
+									url={postUrl}
+									title={post.title || "Check out this post"}
+								/>
+								<ReportButton postId={postId} userId={currentUser?.uid} />
+							</div>
 
 							{/* Blog Content */}
 							<div className="mt-8">
