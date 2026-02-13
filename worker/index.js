@@ -23,6 +23,7 @@ const RATE_LIMITS = {
 	upload: { requests: 10, windowSeconds: 60 }, // 10 uploads per minute
 	email: { requests: 5, windowSeconds: 300 }, // 5 emails per 5 minutes
 	config: { requests: 30, windowSeconds: 60 }, // 30 config requests per minute
+	captcha: { requests: 20, windowSeconds: 60 }, // 20 captcha verifications per minute
 	default: { requests: 100, windowSeconds: 60 }, // 100 requests per minute default
 };
 
@@ -117,6 +118,20 @@ export default {
 				return rateLimitResponse(rateLimitResult, origin);
 			}
 			return handleSponsorEmail(request, env, origin);
+		}
+
+		// Route: Verify Cloudflare Turnstile CAPTCHA token (rate limited)
+		if (url.pathname === "/captcha/verify" && request.method === "POST") {
+			const rateLimitResult = await checkRateLimit(
+				env,
+				clientIP,
+				"captcha",
+				RATE_LIMITS.captcha,
+			);
+			if (!rateLimitResult.allowed) {
+				return rateLimitResponse(rateLimitResult, origin);
+			}
+			return handleCaptchaVerify(request, env, origin, clientIP);
 		}
 
 		// Route: Health check (minimal rate limiting)
@@ -295,6 +310,84 @@ function sanitizeFilename(filename) {
 function isValidMimeType(mimeType, fileType) {
 	const allowedTypes = ALLOWED_MIME_TYPES[fileType] || ALLOWED_MIME_TYPES.media;
 	return allowedTypes.includes(mimeType);
+}
+
+/**
+ * Verify Cloudflare Turnstile CAPTCHA token
+ * @param {Request} request - Incoming request with { token } body
+ * @param {Object} env - Worker environment (needs TURNSTILE_SECRET_KEY)
+ * @param {string} origin - Request origin
+ * @param {string} clientIP - Client IP for Turnstile verification
+ */
+async function handleCaptchaVerify(request, env, origin, clientIP) {
+	try {
+		const body = await request.json();
+		const { token } = body;
+
+		if (!token) {
+			return new Response(
+				JSON.stringify({ success: false, error: "Missing CAPTCHA token" }),
+				{
+					status: 400,
+					headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+				},
+			);
+		}
+
+		if (!env.TURNSTILE_SECRET_KEY) {
+			console.warn(
+				"TURNSTILE_SECRET_KEY not configured — bypassing verification",
+			);
+			return new Response(JSON.stringify({ success: true, bypassed: true }), {
+				status: 200,
+				headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+			});
+		}
+
+		// Call Cloudflare Turnstile siteverify API
+		const verifyResponse = await fetch(
+			"https://challenges.cloudflare.com/turnstile/v0/siteverify",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body: new URLSearchParams({
+					secret: env.TURNSTILE_SECRET_KEY,
+					response: token,
+					remoteip: clientIP,
+				}),
+			},
+		);
+
+		const result = await verifyResponse.json();
+
+		if (result.success) {
+			return new Response(JSON.stringify({ success: true }), {
+				status: 200,
+				headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+			});
+		}
+
+		return new Response(
+			JSON.stringify({
+				success: false,
+				error: "CAPTCHA verification failed",
+				codes: result["error-codes"] || [],
+			}),
+			{
+				status: 403,
+				headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+			},
+		);
+	} catch (error) {
+		console.error("CAPTCHA verification error:", error.message);
+		return new Response(
+			JSON.stringify({ success: false, error: "Verification service error" }),
+			{
+				status: 500,
+				headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+			},
+		);
+	}
 }
 
 /**

@@ -15,12 +15,15 @@ import toast from "react-hot-toast";
 import { loginUser, signInWithGoogle } from "../services/authApi.js";
 // Import auth state to redirect if already logged in
 import { getAuthInstance, onAuthStateChanged } from "../services/firebase.js";
+import { verifyCaptcha } from "../services/workerApi.js";
+import CloudflareTurnstile from "./CloudflareTurnstile.jsx";
 
 const Login = () => {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(false);
+	const [captchaToken, setCaptchaToken] = useState("");
 	const navigate = useNavigate();
 
 	useEffect(() => {
@@ -35,8 +38,21 @@ const Login = () => {
 
 	const handleLogin = async (e) => {
 		e.preventDefault();
+		if (!captchaToken) {
+			setError("Please complete the CAPTCHA verification.");
+			return;
+		}
 		setLoading(true);
 		setError(null);
+
+		try {
+			await verifyCaptcha(captchaToken);
+		} catch {
+			setError("CAPTCHA verification failed. Please try again.");
+			setLoading(false);
+			return;
+		}
+
 		const loginPromise = loginUser(email, password);
 
 		toast.promise(loginPromise, {
@@ -56,8 +72,21 @@ const Login = () => {
 	};
 
 	const handleGoogleLogin = async () => {
+		if (!captchaToken) {
+			setError("Please complete the CAPTCHA verification.");
+			return;
+		}
 		setLoading(true);
 		setError(null);
+
+		try {
+			await verifyCaptcha(captchaToken);
+		} catch {
+			setError("CAPTCHA verification failed. Please try again.");
+			setLoading(false);
+			return;
+		}
+
 		const googlePromise = signInWithGoogle();
 
 		toast.promise(googlePromise, {
@@ -182,11 +211,17 @@ const Login = () => {
 								</div>
 							</div>
 
+							<CloudflareTurnstile
+								onVerify={setCaptchaToken}
+								theme="light"
+								className="flex justify-center"
+							/>
+
 							<motion.button
 								whileHover={{ scale: 1.02 }}
 								whileTap={{ scale: 0.98 }}
 								type="submit"
-								disabled={loading}
+								disabled={loading || !captchaToken}
 								className="w-full py-4 bg-[#335833] text-white font-bold rounded-xl shadow-lg hover:bg-[#2a4a2a] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
 							>
 								{loading ? (

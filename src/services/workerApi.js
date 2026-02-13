@@ -120,3 +120,34 @@ export const checkWorkerHealth = async () => {
 		throw error;
 	}
 };
+
+/**
+ * Verify a Cloudflare Turnstile CAPTCHA token via the worker.
+ * @param {string} token - The Turnstile response token from the widget
+ * @returns {Promise<{ success: boolean }>}
+ */
+export const verifyCaptcha = async (token) => {
+	// Skip verification in dev when no site key is configured
+	if (token === "dev-bypass") {
+		return { success: true };
+	}
+
+	try {
+		const response = await fetch(`${WORKER_URL}/captcha/verify`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ token }),
+		});
+
+		const data = await response.json();
+
+		if (!response.ok || !data.success) {
+			throw new Error(data.error || "CAPTCHA verification failed");
+		}
+
+		return data;
+	} catch (error) {
+		console.error("CAPTCHA verification error:", error);
+		throw error;
+	}
+};

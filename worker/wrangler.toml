@@ -32,6 +32,9 @@ PUBLIC_BUCKET_URL = "https://pub-ec4e8abf64bd4b9688cf5a389c42ffac.r2.dev"
 #   wrangler secret put SPONSOR_SERVICE_ID
 #   wrangler secret put SPONSOR_TEMPLATE_ID
 #   wrangler secret put SPONSOR_PUBLIC_KEY
+#
+# Cloudflare Turnstile CAPTCHA:
+#   wrangler secret put TURNSTILE_SECRET_KEY
 # ============================================================================
 
 # Production settings (optional)

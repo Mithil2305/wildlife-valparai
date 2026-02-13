@@ -5,6 +5,8 @@ import { createPhotoAudioPost } from "../services/uploadPost.js";
 import { uploadMediaToR2 } from "../services/r2Upload.js";
 import toast from "react-hot-toast";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
+import CloudflareTurnstile from "../components/CloudflareTurnstile.jsx";
+import { verifyCaptcha } from "../services/workerApi.js";
 import { FaCloudUploadAlt, FaImage, FaMusic, FaTimes } from "react-icons/fa";
 
 const UploadContent = () => {
@@ -14,6 +16,7 @@ const UploadContent = () => {
 	const [photoPreview, setPhotoPreview] = useState(null);
 	const [uploading, setUploading] = useState(false);
 	const [userData, setUserData] = useState(null);
+	const [captchaToken, setCaptchaToken] = useState("");
 	const navigate = useNavigate();
 	const auth = getAuthInstance();
 	const currentUser = auth?.currentUser;
@@ -90,14 +93,22 @@ const UploadContent = () => {
 			return;
 		}
 
+		if (!captchaToken) {
+			toast.error("Please complete the CAPTCHA verification");
+			return;
+		}
+
 		setUploading(true);
 
 		try {
+			// Verify CAPTCHA server-side before upload
+			await verifyCaptcha(captchaToken);
+
 			// First, upload files to R2 to get URLs
 			const { photoUrl, audioUrl } = await uploadMediaToR2(
 				photoFile,
 				audioFile,
-				currentUser.uid
+				currentUser.uid,
 			);
 
 			// Then create the post with the URLs (use Firestore username, not Auth displayName)
@@ -254,6 +265,12 @@ const UploadContent = () => {
 						</div>
 					</div>
 
+					<CloudflareTurnstile
+						onVerify={setCaptchaToken}
+						theme="light"
+						className="flex justify-center"
+					/>
+
 					<div className="flex gap-4 pt-4">
 						<button
 							type="button"
@@ -264,7 +281,7 @@ const UploadContent = () => {
 						</button>
 						<button
 							type="submit"
-							disabled={uploading}
+							disabled={uploading || !captchaToken}
 							className="flex-1 bg-[#335833] text-white py-3 rounded-xl font-semibold hover:bg-[#2a4a2a] transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
 						>
 							<FaCloudUploadAlt size={20} />

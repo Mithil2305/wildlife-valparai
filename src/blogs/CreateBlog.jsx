@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { getAuthInstance, getUserDoc, getDoc } from "../services/firebase.js";
 import { createBlogPost } from "../services/uploadPost.js";
 import toast from "react-hot-toast";
+import { verifyCaptcha } from "../services/workerApi.js";
+import CloudflareTurnstile from "../components/CloudflareTurnstile.jsx";
 import {
 	BiUndo,
 	BiRedo,
@@ -171,6 +173,7 @@ const CreateBlog = () => {
 	const [loading, setLoading] = useState(false);
 	const [lastSaved, setLastSaved] = useState(null);
 	const [activeSection, setActiveSection] = useState("Labels");
+	const [captchaToken, setCaptchaToken] = useState("");
 
 	// Mobile Sidebar State
 	const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
@@ -241,7 +244,7 @@ const CreateBlog = () => {
 
 	const handleImage = () => {
 		const url = prompt(
-			"Enter Image URL (e.g., https://example.com/image.png):"
+			"Enter Image URL (e.g., https://example.com/image.png):",
 		);
 		if (url) formatDoc("insertImage", url);
 	};
@@ -260,7 +263,22 @@ const CreateBlog = () => {
 			return;
 		}
 
+		if (!captchaToken) {
+			toast.error(
+				"Please complete the CAPTCHA verification before publishing.",
+			);
+			return;
+		}
+
 		setLoading(true);
+
+		try {
+			await verifyCaptcha(captchaToken);
+		} catch {
+			toast.error("CAPTCHA verification failed. Please try again.");
+			setLoading(false);
+			return;
+		}
 
 		const blogPromise = createBlogPost({
 			creatorId: auth?.currentUser?.uid,
@@ -326,7 +344,7 @@ const CreateBlog = () => {
 					<button
 						type="button"
 						onClick={handleSubmit}
-						disabled={loading}
+						disabled={loading || !captchaToken}
 						className="flex items-center gap-2 px-3 md:px-4 py-1.5 bg-[#335833] text-white rounded hover:bg-opacity-90 transition-all text-sm font-bold shadow-sm disabled:opacity-50"
 					>
 						{loading ? "Publishing..." : "Publish"}
@@ -468,6 +486,16 @@ const CreateBlog = () => {
 							labels={labels}
 							setLabels={setLabels}
 						/>
+						<div className="mt-6 pt-4 border-t border-gray-200">
+							<h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">
+								Verification
+							</h3>
+							<CloudflareTurnstile
+								onVerify={setCaptchaToken}
+								theme="light"
+								size="normal"
+							/>
+						</div>
 					</div>
 				</aside>
 
@@ -498,6 +526,16 @@ const CreateBlog = () => {
 									labels={labels}
 									setLabels={setLabels}
 								/>
+								<div className="mt-6 pt-4 border-t border-gray-200">
+									<h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">
+										Verification
+									</h3>
+									<CloudflareTurnstile
+										onVerify={setCaptchaToken}
+										theme="light"
+										size="compact"
+									/>
+								</div>
 							</div>
 						</div>
 					</div>

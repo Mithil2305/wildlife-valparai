@@ -20,6 +20,8 @@ import {
 	getDbInstance,
 	onAuthStateChanged,
 } from "../services/firebase";
+import { verifyCaptcha } from "../services/workerApi.js";
+import CloudflareTurnstile from "./CloudflareTurnstile.jsx";
 
 const Register = () => {
 	const [name, setName] = useState("");
@@ -34,6 +36,7 @@ const Register = () => {
 	const [error, setError] = useState(null);
 	const [usernameStatus, setUsernameStatus] = useState("idle"); // idle, checking, available, taken
 	const [loading, setLoading] = useState(false);
+	const [captchaToken, setCaptchaToken] = useState("");
 	const navigate = useNavigate();
 
 	useEffect(() => {
@@ -72,6 +75,12 @@ const Register = () => {
 		setLoading(true);
 		setError(null);
 
+		if (!captchaToken) {
+			setError("Please complete the CAPTCHA verification.");
+			setLoading(false);
+			return;
+		}
+
 		if (password !== confirmPassword) {
 			setError("Passwords do not match.");
 			setLoading(false);
@@ -92,6 +101,7 @@ const Register = () => {
 		}
 
 		try {
+			await verifyCaptcha(captchaToken);
 			await registerUser(
 				email,
 				password,
@@ -99,7 +109,7 @@ const Register = () => {
 				name,
 				phone,
 				accountType,
-				upiId
+				upiId,
 			);
 			navigate("/");
 		} catch (err) {
@@ -109,9 +119,14 @@ const Register = () => {
 	};
 
 	const handleGoogleLogin = async () => {
+		if (!captchaToken) {
+			setError("Please complete the CAPTCHA verification.");
+			return;
+		}
 		setLoading(true);
 		setError(null);
 		try {
+			await verifyCaptcha(captchaToken);
 			await signInWithGoogle();
 			navigate("/");
 		} catch (err) {
@@ -273,7 +288,7 @@ const Register = () => {
 												setUsername(
 													e.target.value
 														.toLowerCase()
-														.replace(/[^a-z0-9_]/g, "")
+														.replace(/[^a-z0-9_]/g, ""),
 												);
 											}}
 											required
@@ -282,8 +297,8 @@ const Register = () => {
 												usernameStatus === "taken"
 													? "border-red-300 focus:ring-red-200"
 													: usernameStatus === "available"
-													? "border-green-300 focus:ring-green-200"
-													: "border-gray-200 focus:ring-[#335833]"
+														? "border-green-300 focus:ring-green-200"
+														: "border-gray-200 focus:ring-[#335833]"
 											}`}
 										/>
 									</div>
@@ -297,17 +312,17 @@ const Register = () => {
 											usernameStatus === "available"
 												? "bg-green-100 text-green-700"
 												: usernameStatus === "taken"
-												? "bg-red-100 text-red-700"
-												: "bg-gray-200 text-gray-600 hover:bg-gray-300"
+													? "bg-red-100 text-red-700"
+													: "bg-gray-200 text-gray-600 hover:bg-gray-300"
 										}`}
 									>
 										{usernameStatus === "checking"
 											? "..."
 											: usernameStatus === "available"
-											? "Available"
-											: usernameStatus === "taken"
-											? "Taken"
-											: "Verify"}
+												? "Available"
+												: usernameStatus === "taken"
+													? "Taken"
+													: "Verify"}
 									</button>
 								</div>
 							</div>
@@ -412,11 +427,17 @@ const Register = () => {
 								</div>
 							</div>
 
+							<CloudflareTurnstile
+								onVerify={setCaptchaToken}
+								theme="light"
+								className="flex justify-center"
+							/>
+
 							<motion.button
 								whileHover={{ scale: 1.02 }}
 								whileTap={{ scale: 0.98 }}
 								type="submit"
-								disabled={loading}
+								disabled={loading || !captchaToken}
 								className="w-full py-4 mt-4 bg-[#335833] text-white font-bold rounded-xl shadow-lg hover:bg-[#2a4a2a] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
 							>
 								{loading ? (
