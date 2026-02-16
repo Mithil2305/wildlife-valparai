@@ -24,7 +24,7 @@ import {
 } from "react-icons/hi";
 import { toast } from "react-hot-toast";
 import {
-	getDbInstance,
+	getUserDoc,
 	getUsersCollection,
 	getPostsCollection,
 	getSponsorsCollection,
@@ -98,13 +98,13 @@ const PaymentModal = ({ user, onClose, onSuccess }) => {
 	const [loading, setLoading] = useState(false);
 	const [upiId, setUpiId] = useState("Loading...");
 	const [isMarkedPaid, setIsMarkedPaid] = useState(false);
-	const db = getDbInstance();
 
 	useEffect(() => {
 		const fetchDetails = async () => {
 			if (user?.userId) {
 				try {
-					const docSnap = await getDoc(doc(db, "users", user.userId));
+					const userRef = await getUserDoc(user.userId);
+					const docSnap = await getDoc(userRef);
 					if (docSnap.exists()) {
 						setUpiId(docSnap.data().upiId || "Not Linked");
 					}
@@ -114,7 +114,7 @@ const PaymentModal = ({ user, onClose, onSuccess }) => {
 			}
 		};
 		fetchDetails();
-	}, [user, db]);
+	}, [user]);
 
 	const handlePay = async (e) => {
 		e.preventDefault();

@@ -5,8 +5,8 @@ import {
 	getDoc,
 	setDoc,
 	serverTimestamp,
-	getAuthInstance,
-	getDbInstance,
+	getFirebaseAuth,
+	getFirebaseDb,
 	getUsersCollection,
 } from "../services/firebase.js";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -69,14 +69,14 @@ const CreateAdminTool = () => {
 		setStatus("Creating user...");
 
 		try {
-			const auth = getAuthInstance();
-			const db = getDbInstance();
+			const auth = await getFirebaseAuth();
+			const db = await getFirebaseDb();
 
 			// Create Auth User
 			const userCredential = await createUserWithEmailAndPassword(
 				auth,
 				email,
-				password
+				password,
 			);
 			const user = userCredential.user;
 
@@ -91,7 +91,7 @@ const CreateAdminTool = () => {
 				username: "admin_" + Math.random().toString(36).substring(7),
 				phone: "",
 				profilePhotoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-					name
+					name,
 				)}&background=335833&color=fff`,
 			});
 

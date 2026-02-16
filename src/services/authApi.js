@@ -1,6 +1,6 @@
 import {
-	getAuthInstance,
-	getDbInstance,
+	getFirebaseAuth,
+	getFirebaseDb,
 	createUserWithEmailAndPassword,
 	signInWithEmailAndPassword,
 	signOut as firebaseSignOut,
@@ -37,7 +37,7 @@ const _createUserDocuments = async (
 	accountType,
 	phone,
 	profilePhotoUrl,
-	upiId = ""
+	upiId = "",
 ) => {
 	const newUserRef = await getUserDoc(userId);
 	const newUsernameRef = await getUsernameDoc(username);
@@ -74,12 +74,12 @@ export const registerUser = async (
 	name,
 	phone,
 	accountType,
-	upiId
+	upiId,
 ) => {
 	const lowerCaseUsername = username.toLowerCase();
 	const newUsernameRef = await getUsernameDoc(lowerCaseUsername);
-	const db = getDbInstance();
-	const auth = getAuthInstance();
+	const db = await getFirebaseDb();
+	const auth = await getFirebaseAuth();
 
 	try {
 		// Step 1: Check if username is taken inside a transaction [cite: 150-151]
@@ -94,7 +94,7 @@ export const registerUser = async (
 		const userCredential = await createUserWithEmailAndPassword(
 			auth,
 			email,
-			password
+			password,
 		);
 		const user = userCredential.user;
 
@@ -109,7 +109,7 @@ export const registerUser = async (
 				accountType,
 				phone,
 				"", // No profile photo on email signup
-				upiId
+				upiId,
 			);
 		});
 
@@ -125,11 +125,11 @@ export const registerUser = async (
  */
 export const loginUser = async (email, password) => {
 	try {
-		const auth = getAuthInstance();
+		const auth = await getFirebaseAuth();
 		const userCredential = await signInWithEmailAndPassword(
 			auth,
 			email,
-			password
+			password,
 		);
 		return userCredential;
 	} catch (error) {
@@ -143,7 +143,7 @@ export const loginUser = async (email, password) => {
  */
 export const signOut = async () => {
 	try {
-		const auth = getAuthInstance();
+		const auth = await getFirebaseAuth();
 		await firebaseSignOut(auth);
 	} catch (error) {
 		console.error("Error signing out:", error);
@@ -154,8 +154,8 @@ export const signOut = async () => {
 /**
  * Attaches a listener to the user's authentication state.
  */
-export const onAuthStateChange = (callback) => {
-	const auth = getAuthInstance();
+export const onAuthStateChange = async (callback) => {
+	const auth = await getFirebaseAuth();
 	return onAuthStateChanged(auth, callback);
 };
 
@@ -195,7 +195,7 @@ const _generateUniqueUsername = async (transaction, baseUsername) => {
 	const finalSnap = await transaction.get(finalUsernameRef);
 	if (finalSnap.exists()) {
 		throw new Error(
-			"Failed to generate a unique username after multiple attempts."
+			"Failed to generate a unique username after multiple attempts.",
 		);
 	}
 
@@ -209,8 +209,8 @@ const _generateUniqueUsername = async (transaction, baseUsername) => {
 export const signInWithGoogle = async () => {
 	const provider = new GoogleAuthProvider();
 	try {
-		const auth = getAuthInstance();
-		const db = getDbInstance();
+		const auth = await getFirebaseAuth();
+		const db = await getFirebaseDb();
 		const result = await signInWithPopup(auth, provider);
 		const user = result.user;
 
@@ -232,7 +232,7 @@ export const signInWithGoogle = async () => {
 				// Find a unique username
 				const uniqueUsername = await _generateUniqueUsername(
 					transaction,
-					baseUsername
+					baseUsername,
 				);
 
 				// Create the user documents
@@ -245,7 +245,7 @@ export const signInWithGoogle = async () => {
 					"viewer", // Default for Google sign-up
 					user.phoneNumber || "", // Get phone if available, else empty
 					photoURL,
-					"" // UPI ID is empty for Google Sign-In initially
+					"", // UPI ID is empty for Google Sign-In initially
 				);
 			});
 		}

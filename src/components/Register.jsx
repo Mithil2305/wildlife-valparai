@@ -13,11 +13,11 @@ import {
 	HiCamera,
 	HiArrowRight,
 } from "react-icons/hi";
-import { doc, getDoc } from "firebase/firestore";
+import { getDoc } from "firebase/firestore";
 import { registerUser, signInWithGoogle } from "../services/authApi";
 import {
 	getAuthInstance,
-	getDbInstance,
+	getUsernameDoc,
 	onAuthStateChanged,
 } from "../services/firebase";
 import { verifyCaptcha } from "../services/workerApi.js";
@@ -56,8 +56,7 @@ const Register = () => {
 		if (username.length < 3) return;
 		setUsernameStatus("checking");
 		try {
-			const db = getDbInstance();
-			const usernameRef = doc(db, "usernames", username.toLowerCase());
+			const usernameRef = await getUsernameDoc(username.toLowerCase());
 			const usernameSnap = await getDoc(usernameRef);
 			if (usernameSnap.exists()) {
 				setUsernameStatus("taken");
@@ -89,8 +88,7 @@ const Register = () => {
 
 		// Force check if not verified yet
 		if (usernameStatus !== "available") {
-			const db = getDbInstance();
-			const usernameRef = doc(db, "usernames", username.toLowerCase());
+			const usernameRef = await getUsernameDoc(username.toLowerCase());
 			const usernameSnap = await getDoc(usernameRef);
 			if (usernameSnap.exists()) {
 				setError("Username is taken. Please choose another.");
