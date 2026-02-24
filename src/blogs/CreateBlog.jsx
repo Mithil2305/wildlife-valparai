@@ -5,6 +5,8 @@ import { createBlogPost } from "../services/uploadPost.js";
 import toast from "react-hot-toast";
 import { verifyCaptcha } from "../services/workerApi.js";
 import CloudflareTurnstile from "../components/CloudflareTurnstile.jsx";
+import { compressImage } from "../services/imageCompressor.js";
+import { uploadToR2 } from "../services/r2Upload.js";
 import {
 	BiUndo,
 	BiRedo,
@@ -177,9 +179,11 @@ const CreateBlog = () => {
 
 	// Mobile Sidebar State
 	const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
+	const [imageUploading, setImageUploading] = useState(false);
 
 	const navigate = useNavigate();
 	const editorRef = useRef(null);
+	const imageInputRef = useRef(null);
 	const auth = getAuthInstance();
 
 	// --- 1. User Auth ---
@@ -243,10 +247,39 @@ const CreateBlog = () => {
 	};
 
 	const handleImage = () => {
-		const url = prompt(
-			"Enter Image URL (e.g., https://example.com/image.png):",
-		);
-		if (url) formatDoc("insertImage", url);
+		imageInputRef.current?.click();
+	};
+
+	const handleImageFileChange = async (e) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
+		// Reset so the same file can be re-selected if needed
+		e.target.value = "";
+
+		if (!auth?.currentUser?.uid) {
+			toast.error("You must be logged in to upload images.");
+			return;
+		}
+
+		setImageUploading(true);
+		const uploadToast = toast.loading("Compressing & uploading image…");
+
+		try {
+			const compressed = await compressImage(file);
+			const url = await uploadToR2(compressed, auth.currentUser.uid, "photo");
+
+			// Save cursor position before inserting
+			editorRef.current?.focus();
+			formatDoc("insertImage", url);
+
+			toast.success("Image inserted!", { id: uploadToast });
+		} catch (err) {
+			console.error("Image upload failed:", err);
+			toast.error(`Image upload failed: ${err.message}`, { id: uploadToast });
+		} finally {
+			setImageUploading(false);
+		}
 	};
 
 	const handleInput = () => {
@@ -408,7 +441,8 @@ const CreateBlog = () => {
 						<ToolbarButton
 							onClick={handleImage}
 							icon={BiImage}
-							title="Insert Image"
+							title={imageUploading ? "Uploading…" : "Insert Image"}
+							active={imageUploading}
 						/>
 						<ToolbarButton
 							onClick={() => toast("Video upload coming soon")}
@@ -462,6 +496,14 @@ const CreateBlog = () => {
 
 					{/* Scrollable Edit Area */}
 					<div className="grow overflow-y-auto">
+						{/* Hidden image file input */}
+						<input
+							ref={imageInputRef}
+							type="file"
+							accept="image/*"
+							className="hidden"
+							onChange={handleImageFileChange}
+						/>
 						<div className="max-w-4xl mx-auto px-4 py-4 md:px-8 md:py-8 min-h-full">
 							<div
 								ref={editorRef}
