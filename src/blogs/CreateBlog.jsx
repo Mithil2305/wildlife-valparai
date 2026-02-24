@@ -262,21 +262,62 @@ const CreateBlog = () => {
 			return;
 		}
 
+		// ── Optimistic UI: insert a local blob preview instantly ──────────────
+		// The user sees their image immediately — zero perceived wait.
+		const blobUrl = URL.createObjectURL(file);
+		editorRef.current?.focus();
+		formatDoc("insertImage", blobUrl);
+
+		// Find the just-inserted <img> node so we can swap the src later.
+		// It will be the last img in the editor that still has the blob src.
+		const getPlaceholderImg = () =>
+			editorRef.current?.querySelector(`img[src="${blobUrl}"]`);
+
+		// Add a pulsing ring to signal "uploading" without blocking anything
+		const placeholderImg = getPlaceholderImg();
+		if (placeholderImg) {
+			placeholderImg.style.outline = "3px solid #335833";
+			placeholderImg.style.borderRadius = "4px";
+			placeholderImg.style.animation = "pulse 1.2s ease-in-out infinite";
+			placeholderImg.style.opacity = "0.75";
+		}
+
 		setImageUploading(true);
-		const uploadToast = toast.loading("Compressing & uploading image…");
 
 		try {
+			// Compress + upload — runs entirely in the background
 			const compressed = await compressImage(file);
-			const url = await uploadToR2(compressed, auth.currentUser.uid, "photo");
+			const cdnUrl = await uploadToR2(
+				compressed,
+				auth.currentUser.uid,
+				"photo",
+			);
 
-			// Save cursor position before inserting
-			editorRef.current?.focus();
-			formatDoc("insertImage", url);
+			// Silently swap blob URL → CDN URL in the editor DOM
+			const img = getPlaceholderImg();
+			if (img) {
+				img.src = cdnUrl;
+				img.style.outline = "";
+				img.style.animation = "";
+				img.style.opacity = "";
+				img.style.borderRadius = "";
+			}
 
-			toast.success("Image inserted!", { id: uploadToast });
+			// Keep content state in sync with the swapped URL
+			handleInput();
+
+			// Release the blob URL — no longer needed
+			URL.revokeObjectURL(blobUrl);
 		} catch (err) {
 			console.error("Image upload failed:", err);
-			toast.error(`Image upload failed: ${err.message}`, { id: uploadToast });
+
+			// Remove the broken placeholder from the editor
+			const img = getPlaceholderImg();
+			if (img) img.remove();
+			handleInput();
+			URL.revokeObjectURL(blobUrl);
+
+			toast.error(`Image upload failed: ${err.message}`);
 		} finally {
 			setImageUploading(false);
 		}
