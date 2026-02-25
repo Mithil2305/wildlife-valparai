@@ -29,6 +29,7 @@ const formatCount = (n) => {
 
 // ─── Helper: extract first image from blog HTML/markdown ──────────
 const extractThumbnail = (post) => {
+	if (post.photoUrl) return post.photoUrl;
 	if (post.imageUrl) return post.imageUrl;
 	if (post.mediaUrl) return post.mediaUrl;
 	const content = post.blogContent || "";
@@ -54,28 +55,47 @@ const CreatorProfile = () => {
 	// Subscribe to real-time creator profile
 	useEffect(() => {
 		let unsub = () => {};
+		let cancelled = false;
+
 		const setup = async () => {
 			try {
+				// First, try to get the creator profile (or user-doc fallback)
 				const initial = await ensureCreatorProfile(creatorId);
+				if (cancelled) return;
+
 				if (!initial) {
 					setNotFound(true);
 					setLoading(false);
 					return;
 				}
+
+				// We have a valid profile – set it immediately so the page renders
 				setProfile(initial);
+				setLoading(false);
+
+				// Now subscribe for real-time updates
 				unsub = await subscribeCreatorProfile(creatorId, (data) => {
+					if (cancelled) return;
 					if (data) {
 						setProfile(data);
 					}
-					setLoading(false);
+					// If data is null here, the user doc was also deleted.
+					// Keep the existing profile from ensureCreatorProfile rather
+					// than flashing "not found" while listeners settle.
 				});
-			} catch {
-				setNotFound(true);
-				setLoading(false);
+			} catch (err) {
+				console.error("Error loading creator profile:", err);
+				if (!cancelled) {
+					setNotFound(true);
+					setLoading(false);
+				}
 			}
 		};
 		setup();
-		return () => unsub();
+		return () => {
+			cancelled = true;
+			unsub();
+		};
 	}, [creatorId]);
 
 	// Fetch initial posts

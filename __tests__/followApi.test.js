@@ -305,12 +305,29 @@ describe("followApi service", () => {
 			expect(result.posts[0].title).toBe("Post 1");
 		});
 
-		it("uses startAfter for pagination when lastDoc provided", async () => {
-			const lastDoc = { id: "lastDoc" };
-			mockGetDocs.mockResolvedValueOnce({ docs: [] });
+		it("uses client-side pagination when lastDoc provided", async () => {
+			const lastDoc = { id: "post2" };
+			mockGetDocs.mockResolvedValueOnce({
+				docs: [
+					{
+						id: "post1",
+						data: () => ({ title: "Post 1", createdAt: { seconds: 3 } }),
+					},
+					{
+						id: "post2",
+						data: () => ({ title: "Post 2", createdAt: { seconds: 2 } }),
+					},
+					{
+						id: "post3",
+						data: () => ({ title: "Post 3", createdAt: { seconds: 1 } }),
+					},
+				],
+			});
 
-			await getCreatorPosts("creator1", lastDoc);
-			expect(mockStartAfter).toHaveBeenCalledWith(lastDoc);
+			const result = await getCreatorPosts("creator1", lastDoc);
+			// Should return posts after post2
+			expect(result.posts).toHaveLength(1);
+			expect(result.posts[0].id).toBe("post3");
 		});
 	});
 

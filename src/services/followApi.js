@@ -18,7 +18,6 @@ import {
 	serverTimestamp,
 	onSnapshot,
 } from "./firebase.js";
-import { startAfter } from "firebase/firestore";
 
 // ─── COLLECTION HELPERS ───────────────────────────────────────────────
 
@@ -59,42 +58,37 @@ export const ensureCreatorProfile = async (creatorId) => {
 
 	if (snap.exists()) return { id: snap.id, ...snap.data() };
 
-	// Only authenticated users can create the profile doc
-	const auth = await getFirebaseAuth();
-	if (!auth.currentUser) {
-		// Can't create – try to read from the user doc instead (read-only fallback)
-		const userRef = await getUserDoc(creatorId);
-		const userSnap = await getDoc(userRef);
-		if (!userSnap.exists()) return null;
-		const userData = userSnap.data();
-		return {
-			id: creatorId,
-			name: userData.name || "Anonymous",
-			avatarUrl: userData.profilePhotoUrl || "",
-			bio: userData.bio || "",
-			points: userData.points || 0,
-			followerCount: 0,
-			postCount: 0,
-		};
-	}
-
-	// Pull from user profile
+	// Read the underlying user doc – this is always needed as a data source
 	const userRef = await getUserDoc(creatorId);
 	const userSnap = await getDoc(userRef);
-	const userData = userSnap.exists() ? userSnap.data() : {};
+	if (!userSnap.exists()) return null;
+	const userData = userSnap.data();
 
-	const profile = {
+	const fallbackProfile = {
+		id: creatorId,
 		name: userData.name || "Anonymous",
 		avatarUrl: userData.profilePhotoUrl || "",
 		bio: userData.bio || "",
 		points: userData.points || 0,
 		followerCount: 0,
 		postCount: 0,
-		createdAt: serverTimestamp(),
 	};
 
-	await setDoc(creatorRef, profile);
-	return { id: creatorId, ...profile };
+	// Only authenticated users can create the creators/ doc
+	const auth = await getFirebaseAuth();
+	if (!auth.currentUser) return fallbackProfile;
+
+	// Try to persist the creator profile; if it fails (permissions, network, etc.)
+	// we still return a usable profile object so the page renders.
+	try {
+		const profile = { ...fallbackProfile, createdAt: serverTimestamp() };
+		delete profile.id; // id is not stored inside the doc
+		await setDoc(creatorRef, profile);
+		return { id: creatorId, ...profile };
+	} catch (err) {
+		console.warn("Could not persist creator profile, using fallback:", err);
+		return fallbackProfile;
+	}
 };
 
 /**
@@ -109,16 +103,50 @@ export const getCreatorProfile = async (creatorId) => {
 
 /**
  * Subscribe to real-time creator profile updates.
+ * Falls back to the users/{creatorId} doc if the creators doc doesn't exist.
  */
 export const subscribeCreatorProfile = async (creatorId, callback) => {
 	const creatorRef = await getCreatorDoc(creatorId);
-	return onSnapshot(creatorRef, (snap) => {
+	const userRef = await getUserDoc(creatorId);
+
+	// Helper to map a users/ doc into the creator profile shape
+	const mapUserToProfile = (snap) => {
+		if (!snap.exists()) return null;
+		const d = snap.data();
+		return {
+			id: snap.id,
+			name: d.name || "Anonymous",
+			avatarUrl: d.profilePhotoUrl || "",
+			bio: d.bio || "",
+			points: d.points || 0,
+			followerCount: 0,
+			postCount: 0,
+		};
+	};
+
+	// Try the creators collection first
+	let usingFallback = false;
+	let fallbackUnsub = null;
+
+	const creatorUnsub = onSnapshot(creatorRef, (snap) => {
 		if (snap.exists()) {
+			// Creator doc exists – use it directly
 			callback({ id: snap.id, ...snap.data() });
-		} else {
-			callback(null);
+		} else if (!usingFallback) {
+			// No creator doc – subscribe to the user doc as fallback
+			usingFallback = true;
+			fallbackUnsub = onSnapshot(userRef, (userSnap) => {
+				callback(mapUserToProfile(userSnap));
+			});
 		}
+		// If already using fallback, do nothing here (fallback listener handles it)
 	});
+
+	// Return a cleanup function that unsubscribes both listeners
+	return () => {
+		creatorUnsub();
+		if (fallbackUnsub) fallbackUnsub();
+	};
 };
 
 /**
@@ -246,34 +274,35 @@ const POSTS_PAGE_SIZE = 12;
 
 /**
  * Fetch a page of posts for a specific creator with cursor-based pagination.
+ * Uses a simple equality query (no composite index needed) and sorts client-side.
  */
-export const getCreatorPosts = async (creatorId, lastDoc = null) => {
+export const getCreatorPosts = async (creatorId, _lastDoc = null) => {
 	const db = await getFirebaseDb();
 	const postsCol = collection(db, "posts");
 
-	let q = query(
-		postsCol,
-		where("creatorId", "==", creatorId),
-		where("hidden", "==", false),
-		orderBy("createdAt", "desc"),
-		limit(POSTS_PAGE_SIZE),
-	);
-
-	if (lastDoc) {
-		q = query(
-			postsCol,
-			where("creatorId", "==", creatorId),
-			where("hidden", "==", false),
-			orderBy("createdAt", "desc"),
-			startAfter(lastDoc),
-			limit(POSTS_PAGE_SIZE),
-		);
-	}
+	// Single where() – no orderBy, no composite index required.
+	const q = query(postsCol, where("creatorId", "==", creatorId));
 
 	const snap = await getDocs(q);
-	const posts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-	const lastVisible = snap.docs[snap.docs.length - 1] || null;
-	const hasMore = snap.docs.length === POSTS_PAGE_SIZE;
+	const allPosts = snap.docs
+		.map((d) => ({ id: d.id, ...d.data() }))
+		.filter((p) => !p.hidden)
+		.sort((a, b) => {
+			const aTime = a.createdAt?.seconds || 0;
+			const bTime = b.createdAt?.seconds || 0;
+			return bTime - aTime;
+		});
+
+	// Client-side pagination
+	const startIdx = _lastDoc
+		? allPosts.findIndex((p) => p.id === _lastDoc.id) + 1
+		: 0;
+	const posts = allPosts.slice(startIdx, startIdx + POSTS_PAGE_SIZE);
+	const lastVisible =
+		startIdx + POSTS_PAGE_SIZE < allPosts.length
+			? { id: posts[posts.length - 1]?.id }
+			: null;
+	const hasMore = startIdx + POSTS_PAGE_SIZE < allPosts.length;
 
 	return { posts, lastVisible, hasMore };
 };
