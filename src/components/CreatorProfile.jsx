@@ -5,8 +5,8 @@ import {
 	getCreatorPosts,
 	ensureCreatorProfile,
 } from "../services/followApi.js";
-import FollowButton from "../components/FollowButton.jsx";
-import LoadingSpinner from "../components/LoadingSpinner.jsx";
+import FollowButton from "./FollowButton.jsx";
+import LoadingSpinner from "./LoadingSpinner.jsx";
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
 import {
 	FaArrowLeft,
