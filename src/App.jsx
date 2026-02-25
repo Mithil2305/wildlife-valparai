@@ -22,7 +22,7 @@ import Sponsor from "./components/Sponsor.jsx";
 // --- Legal Documents ---
 import Disclaimer from "./documents/Disclaimer.jsx";
 import PrivacyPolicy from "./documents/PrivacyPolicy.jsx";
-import TermsAndConditions from "./documents/TermsAndConditions";
+import TermsAndConditions from "./documents/TermsAndConditions.jsx";
 
 // --- Main Feature Components ---
 import Leaderboard from "./components/Leaderboard.jsx";
