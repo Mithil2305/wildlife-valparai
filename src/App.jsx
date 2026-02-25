@@ -56,6 +56,7 @@ import Favorites from "./socials/Favorites.jsx";
 import LeaderboardPage from "./components/LeaderboardPage.jsx";
 import Advertise from "./components/Advertise.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import CreatorProfile from "./components/CreatorProfile.jsx";
 // import CreateAdminTool from "./util/CreateAdminTool.jsx";
 
 /**
@@ -120,6 +121,9 @@ const App = () => {
 						<Route path="/socials" element={<Socials />} />
 						<Route path="/socials/:postId" element={<PostDetail />} />
 						<Route path="/socials/favorites" element={<Favorites />} />
+
+						{/* Creator Profile */}
+						<Route path="/creator/:creatorId" element={<CreatorProfile />} />
 
 						{/* Legal Routes */}
 						<Route path="/legal/disclaimer" element={<Disclaimer />} />

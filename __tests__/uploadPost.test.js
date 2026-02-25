@@ -38,9 +38,31 @@ jest.unstable_mockModule("firebase/firestore", () => ({
 // Mock the firebase service module
 jest.unstable_mockModule("../src/services/firebase", () => ({
 	db: {},
+	getFirebaseDb: jest.fn(() => Promise.resolve({})),
+	getFirebaseAuth: jest.fn(() =>
+		Promise.resolve({ currentUser: { uid: "creator1" } }),
+	),
+	getUserDoc: jest.fn((userId) => Promise.resolve({ id: userId })),
+	getPostsCollection: jest.fn(() =>
+		Promise.resolve({ id: "POSTS_COLLECTION" }),
+	),
+	getPostDoc: jest.fn((postId) => Promise.resolve({ id: postId })),
 	postsCollection: { id: "POSTS_COLLECTION" },
 	serverTimestamp: mockServerTimestamp,
 	increment: mockIncrement,
+	doc: mockDoc,
+	getDoc: mockGetDoc,
+	getDocs: mockGetDocs,
+	setDoc: mockSetDoc,
+	updateDoc: mockUpdateDoc,
+	deleteDoc: mockDeleteDoc,
+	collection: mockCollection,
+	query: mockQuery,
+	where: mockWhere,
+	orderBy: mockOrderBy,
+	limit: mockLimit,
+	runTransaction: mockRunTransaction,
+	onSnapshot: jest.fn(() => jest.fn()),
 }));
 
 // Mock the points service module
@@ -48,10 +70,16 @@ jest.unstable_mockModule("../src/services/points", () => ({
 	applyPoints: mockApplyPoints,
 }));
 
+// Mock the followApi module
+jest.unstable_mockModule("../src/services/followApi", () => ({
+	notifyFollowersOfNewPost: jest.fn(),
+	incrementCreatorPostCount: jest.fn(),
+	decrementCreatorPostCount: jest.fn(),
+}));
+
 // Import after mocking
-const { createBlogPost, deleteBlogPost } = await import(
-	"../src/services/uploadPost"
-);
+const { createBlogPost, deleteBlogPost } =
+	await import("../src/services/uploadPost");
 
 describe("uploadPost service", () => {
 	beforeEach(() => {
@@ -90,7 +118,7 @@ describe("uploadPost service", () => {
 			"Post deleted",
 			{
 				postId: "post1",
-			}
+			},
 		);
 	});
 });

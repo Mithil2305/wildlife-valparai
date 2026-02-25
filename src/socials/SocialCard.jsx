@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { getAuthInstance } from "../services/firebase.js";
 import {
 	toggleLike,
@@ -16,6 +17,7 @@ import {
 	AiOutlineSend,
 } from "react-icons/ai";
 import ReportButton from "../components/ReportButton.jsx";
+import FollowButton from "../components/FollowButton.jsx";
 
 // Waveform Animation Component
 const Waveform = ({ isPlaying }) => {
@@ -228,7 +230,10 @@ const SocialCard = ({ post, onUpdate }) => {
 		<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300 mb-6">
 			{/* 1. Header: User Info */}
 			<div className="p-4 flex items-center justify-between">
-				<div className="flex items-center gap-3">
+				<Link
+					to={`/creator/${post.creatorId}`}
+					className="flex items-center gap-3 min-w-0"
+				>
 					<div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-100">
 						<img
 							src={
@@ -239,10 +244,11 @@ const SocialCard = ({ post, onUpdate }) => {
 							}
 							alt={post.creatorUsername}
 							className="w-full h-full object-cover"
+							loading="lazy"
 						/>
 					</div>
-					<div>
-						<h3 className="font-bold text-gray-900 text-sm leading-none mb-1">
+					<div className="min-w-0">
+						<h3 className="font-bold text-gray-900 text-sm leading-none mb-1 truncate hover:text-[#335833] transition-colors">
 							{post.creatorUsername || "Anonymous"}
 						</h3>
 						<p className="text-gray-500 text-xs">
@@ -259,8 +265,17 @@ const SocialCard = ({ post, onUpdate }) => {
 								: "Just now"}
 						</p>
 					</div>
+				</Link>
+				<div className="flex items-center gap-2 shrink-0">
+					{post.creatorId && (
+						<FollowButton
+							creatorId={post.creatorId}
+							creatorName={post.creatorUsername || "this creator"}
+							size="sm"
+						/>
+					)}
+					<ReportButton postId={post.id} userId={currentUser?.uid} />
 				</div>
-				<ReportButton postId={post.id} userId={currentUser?.uid} />
 			</div>
 
 			{/* 2. Caption */}

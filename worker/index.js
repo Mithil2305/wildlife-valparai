@@ -16,6 +16,7 @@ const ALLOWED_ORIGINS = [
 	"https://wildlife-valparai.vercel.app",
 	"https://wildlifevalparai.com",
 	"https://www.wildlifevalparai.com",
+	"http://localhost:5173/login",
 ];
 
 // Rate limiting configuration (requests per window)

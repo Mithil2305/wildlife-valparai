@@ -18,6 +18,11 @@ import {
 	runTransaction,
 } from "./firebase";
 import { applyPoints } from "./points";
+import {
+	notifyFollowersOfNewPost,
+	incrementCreatorPostCount,
+	decrementCreatorPostCount,
+} from "./followApi";
 
 /* ===================== POSTS ===================== */
 
@@ -94,6 +99,10 @@ const createPost = async ({
 		{ postId: postRef.id },
 	);
 
+	// Update creator profile post count & notify followers (fire-and-forget)
+	incrementCreatorPostCount(creatorId);
+	notifyFollowersOfNewPost(creatorId, creatorUsername, postRef.id, title, type);
+
 	return postRef.id;
 };
 
@@ -115,6 +124,9 @@ export const deleteBlogPost = async (postId) => {
 		"Post deleted",
 		{ postId },
 	);
+
+	// Decrement creator post count (fire-and-forget)
+	decrementCreatorPostCount(post.creatorId);
 };
 
 export const updateBlogPost = async (postId, { title, blogContent }) => {

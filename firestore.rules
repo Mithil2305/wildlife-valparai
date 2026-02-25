@@ -58,6 +58,19 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow write: if isAdmin();
       }
+
+      /* ---- FOLLOWING (reverse index: users/{userId}/following/{creatorId}) ---- */
+      match /following/{creatorId} {
+        allow read: if true;
+        allow create, delete: if isOwner(userId);
+      }
+
+      /* ---- DEVICES (FCM tokens) ---- */
+      match /devices/{deviceId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
     }
 
     /* ---------- POSTS ---------- */
@@ -161,6 +174,60 @@ service cloud.firestore {
           .hasOnly(['status', 'resolvedAt', 'resolvedBy', 'rejectionReason']);
 
       allow delete: if false;
+    }
+
+    /* ---------- CREATORS (public profiles) ---------- */
+    match /creators/{creatorId} {
+      allow read: if true;
+
+      // Creator profile is auto-created by the app; owner can update own profile
+      allow create: if isAuthenticated();
+
+      // Owner can update their own profile fields
+      allow update: if isOwner(creatorId)
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['name', 'bio', 'avatarUrl']);
+
+      // Follower count and post count are updated transactionally by any authenticated user
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['followerCount', 'postCount']);
+
+      allow delete: if false;
+    }
+
+    /* ---------- FOLLOWERS (per-creator member list) ---------- */
+    match /followers/{creatorId}/members/{memberId} {
+      allow read: if true;
+
+      // A user can only add/remove themselves as a follower
+      allow create, delete: if isOwner(memberId);
+    }
+
+    /* ---------- NOTIFICATIONS (in-app, per user) ---------- */
+    match /notifications/{userId}/items/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isOwner(userId);
+
+      // Any authenticated user can create notifications
+      // (the post creator writes notification docs for each follower)
+      allow create: if isAuthenticated();
+
+      // Users can mark their own notifications as read
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly(['read']);
+
+      allow delete: if isOwner(userId);
+    }
+
+    /* ---------- ANALYTICS ---------- */
+    match /analytics/{eventId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
     }
   }
 }

@@ -12,6 +12,7 @@ import {
 } from "../services/firebase";
 import { signOut } from "../services/authApi";
 import Leaderboard from "./Leaderboard";
+import NotificationBell from "./NotificationBell";
 
 /**
  * ----------------------------------------------------------------
@@ -207,24 +208,24 @@ const Navbar = () => {
 			}`}
 		>
 			<div className="container mx-auto max-w-7xl px-4 md:px-6">
-				{/* Desktop Layout */}
-				<div className="flex justify-between items-center relative h-10">
+				{/* Desktop Layout – 3-column grid keeps toggle centered without overlap */}
+				<div className="hidden md:grid grid-cols-[auto_1fr_auto] items-center h-10">
 					{/* Brand */}
 					<Link
 						to="/"
-						className="text-xl md:text-2xl font-black text-gray-900 tracking-tighter flex items-center gap-2 z-10 hover:opacity-80 transition-opacity"
+						className="text-2xl font-black text-gray-900 tracking-tighter flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0"
 					>
 						<span className="text-[#335833]">Wildlife</span>Valparai
 					</Link>
 
-					{/* Centered Toggle (Absolute positioning maintained as requested) */}
-					<div className="hidden md:flex absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+					{/* Centered Toggle */}
+					<div className="flex justify-center">
 						<BlogSocialToggle isSocials={isSocials} onToggle={handleToggle} />
 					</div>
 
 					{/* Right Menu */}
-					<div className="hidden md:flex items-center space-x-6 z-10">
-						<div className="flex items-center space-x-2 text-sm">
+					<div className="flex items-center gap-6 shrink-0">
+						<div className="flex items-center gap-1 text-sm">
 							<NavLink
 								to="/"
 								className={({ isActive }) =>
@@ -266,13 +267,16 @@ const Navbar = () => {
 								{/* Create Post Dropdown */}
 								{isCreator && <CreatePostDropdown />}
 
+								{/* Notifications */}
+								<NotificationBell />
+
 								<Link to="/profile" className="flex items-center gap-2 group">
 									<div className="w-9 h-9 rounded-full bg-gray-100 border-2 border-white shadow-sm overflow-hidden group-hover:ring-2 group-hover:ring-[#335833] group-hover:ring-offset-2 transition-all">
 										<img
 											src={
 												userProfile?.profilePhotoUrl ||
 												`https://ui-avatars.com/api/?name=${encodeURIComponent(
-													userProfile?.name || "User"
+													userProfile?.name || "User",
 												)}`
 											}
 											alt=""
@@ -290,9 +294,18 @@ const Navbar = () => {
 							</Link>
 						)}
 					</div>
+				</div>
 
-					{/* Mobile Menu Button */}
-					<div className="md:hidden flex items-center gap-3">
+				{/* Mobile Header */}
+				<div className="md:hidden flex justify-between items-center h-10">
+					<Link
+						to="/"
+						className="text-xl font-black text-gray-900 tracking-tighter flex items-center gap-2 hover:opacity-80 transition-opacity"
+					>
+						<span className="text-[#335833]">Wildlife</span>Valparai
+					</Link>
+
+					<div className="flex items-center gap-3">
 						{/* Show Create button on mobile header if creator */}
 						{currentUser && isCreator && !isOpen && (
 							<button
@@ -393,7 +406,7 @@ const Navbar = () => {
 											src={
 												userProfile?.profilePhotoUrl ||
 												`https://ui-avatars.com/api/?name=${encodeURIComponent(
-													userProfile?.name || "User"
+													userProfile?.name || "User",
 												)}`
 											}
 											alt=""

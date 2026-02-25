@@ -15,10 +15,17 @@ jest.unstable_mockModule("firebase/firestore", () => ({
 // Mock the firebase service module
 jest.unstable_mockModule("../src/services/firebase", () => ({
 	db: {},
-	userDoc: mockUserDoc,
-	pointsHistoryCollection: mockPointsHistoryCollection,
+	getFirebaseDb: jest.fn(() => Promise.resolve({})),
+	getUserDoc: mockUserDoc,
+	getPointsHistoryCollection: mockPointsHistoryCollection,
 	doc: mockDoc,
 	serverTimestamp: mockServerTimestamp,
+	runTransaction: mockRunTransaction,
+}));
+
+// Mock the leaderboard service
+jest.unstable_mockModule("../src/services/leaderboard", () => ({
+	invalidateLeaderboardCache: jest.fn(),
 }));
 
 // Import after mocking
@@ -45,7 +52,7 @@ describe("applyPoints()", () => {
 		expect(tx.get).toHaveBeenCalled();
 		expect(tx.update).toHaveBeenCalledWith(
 			{ id: "USER_REF" },
-			expect.objectContaining({ points: 60 })
+			expect.objectContaining({ points: 60 }),
 		);
 		expect(tx.set).toHaveBeenCalled();
 	});

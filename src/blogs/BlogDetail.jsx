@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { getPost, getLatestPosts } from "../services/uploadPost.js";
 import { getAuthInstance } from "../services/firebase.js";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
@@ -10,6 +10,7 @@ import AdContainer from "../components/AdContainer.jsx";
 import SocialShareButtons from "./SocialShareButtons.jsx";
 import BlogCard from "../components/BlogCard.jsx";
 import ReportButton from "../components/ReportButton.jsx";
+import FollowButton from "../components/FollowButton.jsx";
 import {
 	FaChevronLeft,
 	FaChevronRight,
@@ -141,10 +142,24 @@ const BlogDetail = () => {
 							</h1>
 
 							{/* Meta Info */}
-							<div className="flex items-center text-sm text-gray-600 mb-6 pb-6 border-b border-gray-200">
-								<span>By {post.creatorUsername || "Anonymous"}</span>
-								<span className="mx-2">•</span>
-								<span>{formattedDate}</span>
+							<div className="flex items-center justify-between flex-wrap gap-3 text-sm text-gray-600 mb-6 pb-6 border-b border-gray-200">
+								<div className="flex items-center flex-wrap gap-2">
+									<Link
+										to={`/creator/${post.creatorId}`}
+										className="hover:text-[#335833] font-medium transition-colors"
+									>
+										By {post.creatorUsername || "Anonymous"}
+									</Link>
+									<span className="mx-1">•</span>
+									<span>{formattedDate}</span>
+								</div>
+								{post.creatorId && (
+									<FollowButton
+										creatorId={post.creatorId}
+										creatorName={post.creatorUsername || "this creator"}
+										size="sm"
+									/>
+								)}
 							</div>
 
 							{/* Social Share Buttons & Report */}

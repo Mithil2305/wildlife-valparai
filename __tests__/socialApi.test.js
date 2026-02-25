@@ -29,13 +29,30 @@ jest.unstable_mockModule("firebase/firestore", () => ({
 	where: mockWhere,
 	increment: mockIncrement,
 	serverTimestamp: mockServerTimestamp,
+	collectionGroup: jest.fn(),
 }));
 
 // Mock the firebase service module
 jest.unstable_mockModule("../src/services/firebase", () => ({
 	db: {},
+	getFirebaseDb: jest.fn(() => Promise.resolve({})),
+	getPostsCollection: jest.fn(() =>
+		Promise.resolve({ id: "POSTS_COLLECTION" }),
+	),
+	getPostDoc: jest.fn((postId) => Promise.resolve({ id: postId })),
+	getLikeDoc: jest.fn(() => Promise.resolve({ id: "LIKE_DOC" })),
 	serverTimestamp: mockServerTimestamp,
 	increment: mockIncrement,
+	doc: mockDoc,
+	getDoc: mockGetDoc,
+	getDocs: mockGetDocs,
+	setDoc: mockSetDoc,
+	deleteDoc: mockDeleteDoc,
+	updateDoc: mockUpdateDoc,
+	collection: mockCollection,
+	query: mockQuery,
+	where: mockWhere,
+	runTransaction: mockRunTransaction,
 }));
 
 // Mock the points service module
@@ -92,7 +109,7 @@ describe("socialApi service", () => {
 			"Post shared",
 			{
 				postId: "post1",
-			}
+			},
 		);
 	});
 });
