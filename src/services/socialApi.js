@@ -13,9 +13,9 @@ import {
 	query,
 	where,
 	runTransaction,
-} from "./firebase";
+} from "./firebase.js";
 import { collectionGroup } from "firebase/firestore";
-import { applyPoints } from "./points";
+import { applyPoints } from "./points.js";
 
 /* ===================== FEED ===================== */
 

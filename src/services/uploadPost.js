@@ -16,13 +16,13 @@ import {
 	deleteDoc,
 	collection,
 	runTransaction,
-} from "./firebase";
-import { applyPoints } from "./points";
+} from "./firebase.js";
+import { applyPoints } from "./points.js";
 import {
 	notifyFollowersOfNewPost,
 	incrementCreatorPostCount,
 	decrementCreatorPostCount,
-} from "./followApi";
+} from "./followApi.js";
 
 /* ===================== POSTS ===================== */
 

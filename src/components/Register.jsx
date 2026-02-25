@@ -14,12 +14,12 @@ import {
 	HiArrowRight,
 } from "react-icons/hi";
 import { getDoc } from "firebase/firestore";
-import { registerUser, signInWithGoogle } from "../services/authApi";
+import { registerUser, signInWithGoogle } from "../services/authApi.js";
 import {
 	getAuthInstance,
 	getUsernameDoc,
 	onAuthStateChanged,
-} from "../services/firebase";
+} from "../services/firebase.js";
 import { verifyCaptcha } from "../services/workerApi.js";
 import CloudflareTurnstile from "./CloudflareTurnstile.jsx";
 

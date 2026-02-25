@@ -17,7 +17,7 @@ import {
 	increment,
 	serverTimestamp,
 	onSnapshot,
-} from "./firebase";
+} from "./firebase.js";
 import { startAfter } from "firebase/firestore";
 
 // ─── COLLECTION HELPERS ───────────────────────────────────────────────

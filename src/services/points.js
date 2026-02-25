@@ -5,8 +5,8 @@ import {
 	serverTimestamp,
 	doc,
 	runTransaction,
-} from "./firebase";
-import { invalidateLeaderboardCache } from "./leaderboard";
+} from "./firebase.js";
+import { invalidateLeaderboardCache } from "./leaderboard.js";
 
 /**
  * Apply points to a user in a SAFE atomic transaction.

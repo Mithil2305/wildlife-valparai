@@ -9,10 +9,10 @@ import {
 	onAuthStateChanged,
 	getUserDoc,
 	getDoc,
-} from "../services/firebase";
-import { signOut } from "../services/authApi";
-import Leaderboard from "./Leaderboard";
-import NotificationBell from "./NotificationBell";
+} from "../services/firebase.js";
+import { signOut } from "../services/authApi.js";
+import Leaderboard from "./Leaderboard.jsx";
+import NotificationBell from "./NotificationBell.jsx";
 
 /**
  * ----------------------------------------------------------------
