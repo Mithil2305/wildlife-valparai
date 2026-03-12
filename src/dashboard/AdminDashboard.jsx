@@ -322,7 +322,7 @@ const AdminDashboard = () => {
 	}, []);
 
 	// Handlers
-	const handleDelete = async (collectionRef, id, type) => {
+	const handleDelete = async (collectionRefOrPromise, id, type) => {
 		if (
 			!window.confirm(
 				"Are you sure you want to delete this content permanently?",
@@ -330,6 +330,7 @@ const AdminDashboard = () => {
 		)
 			return;
 		try {
+			const collectionRef = await collectionRefOrPromise;
 			await deleteDoc(doc(collectionRef, id));
 			toast.success("Content deleted");
 
@@ -347,7 +348,7 @@ const AdminDashboard = () => {
 		const name = prompt("Enter Sponsor Name:");
 		if (!name) return;
 		try {
-			const sponsorsCol = getSponsorsCollection();
+			const sponsorsCol = await getSponsorsCollection();
 			const newSponsor = {
 				name,
 				tier: "Gold",
