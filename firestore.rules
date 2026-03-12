@@ -45,7 +45,8 @@ service cloud.firestore {
           .affectedKeys()
           .hasOnly(['accountType']);
 
-      allow delete: if false;
+      // Only admins can delete user documents
+      allow delete: if isAdmin();
 
       /* ---- POINTS HISTORY ---- */
       match /pointsHistory/{historyId} {

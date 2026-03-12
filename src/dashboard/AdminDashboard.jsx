@@ -21,6 +21,7 @@ import {
 	HiBan,
 	HiCheckCircle,
 	HiXCircle,
+	HiSearch,
 } from "react-icons/hi";
 import { toast } from "react-hot-toast";
 import {
@@ -29,6 +30,8 @@ import {
 	getPostsCollection,
 	getSponsorsCollection,
 	getAuthInstance,
+	getUsernameDoc,
+	getFirebaseDb,
 } from "../services/firebase.js";
 import {
 	getDocs,
@@ -37,6 +40,8 @@ import {
 	addDoc,
 	serverTimestamp,
 	getDoc,
+	query,
+	where,
 } from "firebase/firestore";
 import { calculateLeaderboard } from "../services/leaderboard.js";
 import { createPayment } from "../services/payments.js";
@@ -251,6 +256,8 @@ const AdminDashboard = () => {
 	const [tickets, setTickets] = useState([]);
 	const [rejectReason, setRejectReason] = useState("");
 	const [rejectingTicketId, setRejectingTicketId] = useState(null);
+	const [allUsers, setAllUsers] = useState([]);
+	const [userSearch, setUserSearch] = useState("");
 
 	const auth = getAuthInstance();
 	const adminId = auth?.currentUser?.uid;
@@ -288,6 +295,16 @@ const AdminDashboard = () => {
 					socials: socialPosts.length,
 					sponsors: sponsorsSnap.size,
 				});
+
+				// Store all users for the Users tab
+				const usersList = usersSnap.docs.map((d) => ({
+					id: d.id,
+					...d.data(),
+				}));
+				usersList.sort(
+					(a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0),
+				);
+				setAllUsers(usersList);
 
 				// 3. Set Content States (Limit 20 for view)
 				setBlogs(blogPosts.slice(0, 20));
@@ -447,6 +464,72 @@ const AdminDashboard = () => {
 		}
 	};
 
+	// --- User Management Handlers ---
+	const handleDeleteUser = async (user) => {
+		if (user.id === adminId) {
+			toast.error("You cannot delete your own account!");
+			return;
+		}
+		if (
+			!window.confirm(
+				`Are you sure you want to delete user "${user.displayName || user.username || user.id}"?\n\nThis will permanently remove:\n• User profile\n• Username reservation\n• Creator profile\n• All their posts\n\nThis action cannot be undone.`,
+			)
+		)
+			return;
+
+		try {
+			const db = await getFirebaseDb();
+
+			// 1. Delete username reservation (if they have a username)
+			if (user.username) {
+				try {
+					const usernameRef = await getUsernameDoc(user.username);
+					await deleteDoc(usernameRef);
+				} catch (e) {
+					console.warn("Could not delete username doc:", e);
+				}
+			}
+
+			// 2. Delete creator profile (if exists)
+			try {
+				const creatorRef = doc(db, "creators", user.id);
+				await deleteDoc(creatorRef);
+			} catch (e) {
+				console.warn("Could not delete creator doc:", e);
+			}
+
+			// 3. Delete all user's posts
+			try {
+				const postsCol = await getPostsCollection();
+				const postsQuery = query(postsCol, where("creatorId", "==", user.id));
+				const postsSnap = await getDocs(postsQuery);
+				const deletePromises = postsSnap.docs.map((d) => deleteDoc(d.ref));
+				await Promise.all(deletePromises);
+			} catch (e) {
+				console.warn("Could not delete user posts:", e);
+			}
+
+			// 4. Delete the user document itself
+			const userRef = await getUserDoc(user.id);
+			await deleteDoc(userRef);
+
+			// 5. Update local state
+			setAllUsers((prev) => prev.filter((u) => u.id !== user.id));
+			setStats((prev) => ({ ...prev, users: prev.users - 1 }));
+
+			// Also remove from blogs/socials if they had posts
+			setBlogs((prev) => prev.filter((b) => b.creatorId !== user.id));
+			setSocials((prev) => prev.filter((s) => s.creatorId !== user.id));
+
+			toast.success(
+				`User "${user.displayName || user.username || user.id}" deleted successfully`,
+			);
+		} catch (error) {
+			console.error("Error deleting user:", error);
+			toast.error("Failed to delete user. Check console for details.");
+		}
+	};
+
 	if (loading)
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-[#F3F4F6]">
@@ -506,6 +589,12 @@ const AdminDashboard = () => {
 					label="Upgrade Tickets"
 					isActive={activeTab === "tickets"}
 					onClick={() => setActiveTab("tickets")}
+				/>
+				<SidebarItem
+					icon={HiUserGroup}
+					label="Manage Users"
+					isActive={activeTab === "users"}
+					onClick={() => setActiveTab("users")}
 				/>
 			</aside>
 
@@ -1161,6 +1250,173 @@ const AdminDashboard = () => {
 										No upgrade tickets found.
 									</div>
 								)}
+							</div>
+						</motion.div>
+					)}
+
+					{/* ==================== USERS TAB ==================== */}
+					{activeTab === "users" && (
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							className="space-y-6"
+						>
+							{/* Search Bar */}
+							<div className="relative">
+								<HiSearch
+									className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+									size={20}
+								/>
+								<input
+									type="text"
+									placeholder="Search by name, email, or username..."
+									value={userSearch}
+									onChange={(e) => setUserSearch(e.target.value)}
+									className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#335833] focus:border-[#335833] outline-none font-medium shadow-sm transition-all"
+								/>
+							</div>
+
+							{/* User Count */}
+							<div className="flex items-center justify-between">
+								<p className="text-sm text-gray-500 font-medium">
+									{
+										allUsers.filter((u) => {
+											if (!userSearch.trim()) return true;
+											const q = userSearch.toLowerCase();
+											return (
+												(u.displayName || "").toLowerCase().includes(q) ||
+												(u.email || "").toLowerCase().includes(q) ||
+												(u.username || "").toLowerCase().includes(q)
+											);
+										}).length
+									}{" "}
+									users found
+								</p>
+							</div>
+
+							{/* Users List */}
+							<div className="space-y-3">
+								{allUsers
+									.filter((u) => {
+										if (!userSearch.trim()) return true;
+										const q = userSearch.toLowerCase();
+										return (
+											(u.displayName || "").toLowerCase().includes(q) ||
+											(u.email || "").toLowerCase().includes(q) ||
+											(u.username || "").toLowerCase().includes(q)
+										);
+									})
+									.map((user) => (
+										<div
+											key={user.id}
+											className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+										>
+											{/* User Info */}
+											<div className="flex items-center gap-4 flex-1 min-w-0">
+												<div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-lg shrink-0 overflow-hidden">
+													{user.photoURL ? (
+														<img
+															src={user.photoURL}
+															alt=""
+															className="w-full h-full object-cover"
+														/>
+													) : (
+														(user.displayName || "?").charAt(0).toUpperCase()
+													)}
+												</div>
+												<div className="min-w-0 flex-1">
+													<div className="flex items-center gap-2 flex-wrap">
+														<h3 className="font-bold text-gray-900 truncate">
+															{user.displayName || "No Name"}
+														</h3>
+														{user.accountType && (
+															<span
+																className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+																	user.accountType === "admin"
+																		? "bg-red-100 text-red-700"
+																		: user.accountType === "creator"
+																			? "bg-purple-100 text-purple-700"
+																			: "bg-gray-100 text-gray-600"
+																}`}
+															>
+																{user.accountType}
+															</span>
+														)}
+														{user.id === adminId && (
+															<span className="px-2 py-0.5 text-xs font-bold rounded-full bg-yellow-100 text-yellow-700">
+																You
+															</span>
+														)}
+													</div>
+													<p className="text-sm text-gray-500 truncate">
+														{user.email || "No email"}
+													</p>
+													<div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+														{user.username && (
+															<span className="font-mono">
+																@{user.username}
+															</span>
+														)}
+														{user.points !== undefined && (
+															<span className="flex items-center gap-1">
+																<HiStar className="text-yellow-500" />
+																{user.points} pts
+															</span>
+														)}
+														{user.createdAt && (
+															<span>
+																Joined{" "}
+																{new Date(
+																	user.createdAt.seconds * 1000,
+																).toLocaleDateString()}
+															</span>
+														)}
+													</div>
+												</div>
+											</div>
+
+											{/* Actions */}
+											<div className="shrink-0">
+												{user.id === adminId ? (
+													<span className="text-xs text-gray-400 font-medium">
+														Protected
+													</span>
+												) : (
+													<button
+														onClick={() => handleDeleteUser(user)}
+														className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors group"
+														title="Delete user"
+													>
+														<HiTrash
+															size={18}
+															className="group-hover:scale-110 transition-transform"
+														/>
+													</button>
+												)}
+											</div>
+										</div>
+									))}
+
+								{allUsers.length === 0 && (
+									<div className="py-12 text-center text-gray-400 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+										No users found.
+									</div>
+								)}
+
+								{allUsers.length > 0 &&
+									allUsers.filter((u) => {
+										if (!userSearch.trim()) return true;
+										const q = userSearch.toLowerCase();
+										return (
+											(u.displayName || "").toLowerCase().includes(q) ||
+											(u.email || "").toLowerCase().includes(q) ||
+											(u.username || "").toLowerCase().includes(q)
+										);
+									}).length === 0 && (
+										<div className="py-12 text-center text-gray-400 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+											No users match your search.
+										</div>
+									)}
 							</div>
 						</motion.div>
 					)}
