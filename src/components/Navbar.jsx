@@ -341,18 +341,26 @@ const Navbar = () => {
 								{isMobileCreateOpen && (
 									<div className="absolute right-0 mt-2 w-52 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-100 py-2 z-30 overflow-hidden ring-1 ring-black/5">
 										<button
-											onClick={() => handleMobileCreateNavigation("/upload/blog")}
+											onClick={() =>
+												handleMobileCreateNavigation("/upload/blog")
+											}
 											className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
 										>
 											<HiDocumentText className="text-blue-600" size={18} />
-											<span className="font-bold text-sm text-gray-800">Write Article</span>
+											<span className="font-bold text-sm text-gray-800">
+												Write Article
+											</span>
 										</button>
 										<button
-											onClick={() => handleMobileCreateNavigation("/upload/content")}
+											onClick={() =>
+												handleMobileCreateNavigation("/upload/content")
+											}
 											className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
 										>
 											<HiPhotograph className="text-green-600" size={18} />
-											<span className="font-bold text-sm text-gray-800">Upload Post</span>
+											<span className="font-bold text-sm text-gray-800">
+												Upload Post
+											</span>
 										</button>
 									</div>
 								)}
