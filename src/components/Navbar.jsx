@@ -197,12 +197,36 @@ const Navbar = ({ onStartTutorial = () => {} }) => {
 				setIsMobileCreateOpen(false);
 			}
 		};
+
+		const handleTutorialMobileState = (event) => {
+			if (window.innerWidth >= 768) return;
+			const { openMenu, openCreate } = event.detail || {};
+
+			if (typeof openMenu === "boolean") {
+				setIsOpen(openMenu);
+				if (openMenu) {
+					setIsMobileCreateOpen(false);
+				}
+			}
+
+			if (typeof openCreate === "boolean") {
+				setIsMobileCreateOpen(openCreate);
+				if (openCreate) {
+					setIsOpen(false);
+				}
+			}
+		};
 		document.addEventListener("click", handleDocumentClick);
+		window.addEventListener("tutorial:mobile-nav-state", handleTutorialMobileState);
 
 		return () => {
 			unsubscribe();
 			window.removeEventListener("scroll", handleScroll);
 			document.removeEventListener("click", handleDocumentClick);
+			window.removeEventListener(
+				"tutorial:mobile-nav-state",
+				handleTutorialMobileState,
+			);
 		};
 	}, []);
 
@@ -466,6 +490,22 @@ const Navbar = ({ onStartTutorial = () => {} }) => {
 					>
 						About
 					</NavLink>
+					<NavLink
+						to="/leaderboard"
+						title="Leaderboard: Track top users and rankings"
+						data-tutorial="nav-leaderboard"
+						className={({ isActive }) =>
+							`block px-4 py-3 rounded-xl font-bold transition-all ${
+								isActive
+									? "bg-green-50 text-[#335833]"
+									: "text-gray-600 hover:bg-gray-50"
+							}`
+						}
+						onClick={closeMobileMenu}
+					>
+						Leaderboard
+					</NavLink>
+
 					<NavLink
 						to="/contact"
 						title="Contact: Reach support and share feedback"
