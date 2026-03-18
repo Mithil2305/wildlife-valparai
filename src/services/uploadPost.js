@@ -2,6 +2,7 @@ import {
 	getFirebaseDb,
 	getPostsCollection,
 	getPostDoc,
+	getUserDoc,
 	serverTimestamp,
 	increment,
 	doc,
@@ -23,6 +24,42 @@ import {
 	incrementCreatorPostCount,
 	decrementCreatorPostCount,
 } from "./followApi.js";
+
+const enrichCreatorProfilePhoto = async (posts) => {
+	if (!posts?.length) return posts;
+
+	const missingPhotoPosts = posts.filter(
+		(post) => !post.creatorProfilePhoto && post.creatorId,
+	);
+	if (!missingPhotoPosts.length) return posts;
+
+	const uniqueCreatorIds = [...new Set(missingPhotoPosts.map((p) => p.creatorId))];
+	const creatorPhotoMap = new Map();
+
+	await Promise.all(
+		uniqueCreatorIds.map(async (creatorId) => {
+			try {
+				const userRef = await getUserDoc(creatorId);
+				const userSnap = await getDoc(userRef);
+				if (userSnap.exists()) {
+					const userData = userSnap.data();
+					creatorPhotoMap.set(
+						creatorId,
+						userData.profilePhotoUrl || userData.photoURL || "",
+					);
+				}
+			} catch (error) {
+				console.warn("Could not fetch creator photo for post enrichment:", error);
+			}
+		}),
+	);
+
+	return posts.map((post) => ({
+		...post,
+		creatorProfilePhoto:
+			post.creatorProfilePhoto || creatorPhotoMap.get(post.creatorId) || "",
+	}));
+};
 
 /* ===================== POSTS ===================== */
 
@@ -148,7 +185,26 @@ export const updateBlogPost = async (postId, { title, blogContent }) => {
 export const getPost = async (postId) => {
 	const postRef = await getPostDoc(postId);
 	const snap = await getDoc(postRef);
-	return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+	if (!snap.exists()) return null;
+
+	const post = { id: snap.id, ...snap.data() };
+	if (post.creatorProfilePhoto || !post.creatorId) return post;
+
+	try {
+		const userRef = await getUserDoc(post.creatorId);
+		const userSnap = await getDoc(userRef);
+		if (userSnap.exists()) {
+			const userData = userSnap.data();
+			return {
+				...post,
+				creatorProfilePhoto: userData.profilePhotoUrl || userData.photoURL || "",
+			};
+		}
+	} catch (error) {
+		console.warn("Could not fetch creator photo for post:", error);
+	}
+
+	return post;
 };
 
 export const getLatestPosts = async (count = 10) => {
@@ -156,17 +212,20 @@ export const getLatestPosts = async (count = 10) => {
 	// Fetch extra to account for hidden posts filtered out
 	const q = query(postsCol, orderBy("createdAt", "desc"), limit(count + 10));
 	const snap = await getDocs(q);
-	return snap.docs
+	const posts = snap.docs
 		.map((d) => ({ id: d.id, ...d.data() }))
 		.filter((post) => !post.hidden)
 		.slice(0, count);
+
+	return enrichCreatorProfilePhoto(posts);
 };
 
 export const getCreatorPosts = async (creatorId) => {
 	const postsCol = await getPostsCollection();
 	const q = query(postsCol, where("creatorId", "==", creatorId));
 	const snap = await getDocs(q);
-	return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+	const posts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+	return enrichCreatorProfilePhoto(posts);
 };
 
 /* ===================== COMMENTS ===================== */

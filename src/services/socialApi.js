@@ -3,13 +3,12 @@ import {
 	getPostsCollection,
 	getPostDoc,
 	getLikeDoc,
+	getUserDoc,
 	serverTimestamp,
 	increment,
-	doc,
 	getDoc,
 	getDocs,
 	updateDoc,
-	collection,
 	query,
 	where,
 	runTransaction,
@@ -17,14 +16,52 @@ import {
 import { collectionGroup } from "firebase/firestore";
 import { applyPoints } from "./points.js";
 
+const enrichCreatorProfilePhoto = async (posts) => {
+	if (!posts?.length) return posts;
+
+	const missingPhotoPosts = posts.filter(
+		(post) => !post.creatorProfilePhoto && post.creatorId,
+	);
+	if (!missingPhotoPosts.length) return posts;
+
+	const uniqueCreatorIds = [...new Set(missingPhotoPosts.map((p) => p.creatorId))];
+	const creatorPhotoMap = new Map();
+
+	await Promise.all(
+		uniqueCreatorIds.map(async (creatorId) => {
+			try {
+				const userRef = await getUserDoc(creatorId);
+				const userSnap = await getDoc(userRef);
+				if (userSnap.exists()) {
+					const userData = userSnap.data();
+					creatorPhotoMap.set(
+						creatorId,
+						userData.profilePhotoUrl || userData.photoURL || "",
+					);
+				}
+			} catch (error) {
+				console.warn("Could not fetch creator photo for post enrichment:", error);
+			}
+		}),
+	);
+
+	return posts.map((post) => ({
+		...post,
+		creatorProfilePhoto:
+			post.creatorProfilePhoto || creatorPhotoMap.get(post.creatorId) || "",
+	}));
+};
+
 /* ===================== FEED ===================== */
 
 export const getAllPosts = async () => {
 	const postsCol = await getPostsCollection();
 	const snap = await getDocs(postsCol);
-	return snap.docs
+	const posts = snap.docs
 		.map((d) => ({ id: d.id, ...d.data() }))
 		.filter((post) => !post.hidden);
+
+	return enrichCreatorProfilePhoto(posts);
 };
 
 export const getUserLikedPosts = async (userId) => {

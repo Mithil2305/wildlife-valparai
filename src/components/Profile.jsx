@@ -36,7 +36,9 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 	const [upi, setUpi] = useState(user.upiId || "");
 	const [phone, setPhone] = useState(user.phone || "");
 	const [profileImageFile, setProfileImageFile] = useState(null);
-	const [imagePreview, setImagePreview] = useState(user.profilePhotoUrl);
+	const [imagePreview, setImagePreview] = useState(
+		user.profilePhotoUrl || user.photoURL || "",
+	);
 	const [isUploading, setIsUploading] = useState(false);
 	const fileInputRef = useRef(null);
 	const auth = getAuthInstance();
@@ -63,7 +65,7 @@ const EditProfileModal = ({ user, onClose, onSave }) => {
 		const loadingToast = toast.loading("Saving profile...");
 
 		try {
-			let newPhotoUrl = user.profilePhotoUrl;
+			let newPhotoUrl = user.profilePhotoUrl || user.photoURL || "";
 			if (profileImageFile) {
 				newPhotoUrl = await uploadSingleFile(
 					profileImageFile,
@@ -316,6 +318,7 @@ const Profile = () => {
 										<img
 											src={
 												user.profilePhotoUrl ||
+												user.photoURL ||
 												`https://ui-avatars.com/api/?name=${encodeURIComponent(
 													user.name || user.username || "User",
 												)}&size=128&background=335833&color=fff`

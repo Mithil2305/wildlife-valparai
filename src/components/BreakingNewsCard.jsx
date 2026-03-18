@@ -46,6 +46,11 @@ const BreakingNewsCard = ({ post }) => {
 	const thumbnailUrl =
 		extractFirstImage(post.blogContent) ||
 		"https://placehold.co/800x600/335833/FFF?text=Breaking+News";
+	const creatorAvatar =
+		post.creatorProfilePhoto ||
+		`https://ui-avatars.com/api/?name=${encodeURIComponent(
+			post.creatorUsername || "Anonymous",
+		)}&background=335833&color=fff`;
 
 	const excerpt = createExcerpt(post.blogContent, 200);
 
@@ -82,9 +87,21 @@ const BreakingNewsCard = ({ post }) => {
 							{post.title || "Untitled Post"}
 						</Link>
 					</h2>
-					<p className="text-sm text-gray-500 mb-4">
-						By {post.creatorUsername || "Anonymous"} | {formattedDate}
-					</p>
+					<div className="flex items-center gap-2 mb-4">
+						<img
+							src={creatorAvatar}
+							alt={post.creatorUsername || "Anonymous"}
+							className="w-8 h-8 rounded-full object-cover border border-gray-200"
+							onError={(e) => {
+								e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+									post.creatorUsername || "Anonymous",
+								)}&background=335833&color=fff`;
+							}}
+						/>
+						<p className="text-sm text-gray-500">
+							By {post.creatorUsername || "Anonymous"} | {formattedDate}
+						</p>
+					</div>
 					<p className="text-gray-700 mb-5 line-clamp-4">{excerpt}</p>
 					<Link
 						to={`/blog/${post.id}`}

@@ -66,7 +66,7 @@ const SocialCard = ({ post, onUpdate }) => {
 
 	// Stats State
 	const [likeCount, setLikeCount] = useState(post.likeCount || 0);
-	const [shareCount, setShareCount] = useState(post.shareCount || 0);
+	// const [shareCount, setShareCount] = useState(post.shareCount || 0);
 	const [comments, setComments] = useState([]);
 
 	// Comment Input State
@@ -179,7 +179,7 @@ const SocialCard = ({ post, onUpdate }) => {
 		if (currentUser) {
 			try {
 				await recordShare(post.id, currentUser.uid);
-				setShareCount((prev) => prev + 1);
+				// setShareCount((prev) => prev + 1);
 				if (onUpdate) await onUpdate();
 			} catch (error) {
 				console.error("Error recording share:", error);

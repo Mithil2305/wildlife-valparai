@@ -88,9 +88,26 @@ const BlogCard = ({ post }) => {
 							{post.title || "Untitled Post"}
 						</Link>
 					</h2>
-					<p className="text-xs text-gray-500 mb-3">
-						By {post.creatorUsername || "Anonymous"} | {formattedDate}
-					</p>
+					<div className="flex items-center gap-2 mb-3">
+						<img
+							src={
+								post.creatorProfilePhoto ||
+								`https://ui-avatars.com/api/?name=${encodeURIComponent(
+									post.creatorUsername || "Anonymous",
+								)}&background=335833&color=fff`
+							}
+							alt={post.creatorUsername || "Anonymous"}
+							className="w-7 h-7 rounded-full object-cover border border-gray-200"
+							onError={(e) => {
+								e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+									post.creatorUsername || "Anonymous",
+								)}&background=335833&color=fff`;
+							}}
+						/>
+						<p className="text-xs text-gray-500">
+							By {post.creatorUsername || "Anonymous"} | {formattedDate}
+						</p>
+					</div>
 					<p className="text-gray-700 text-sm mb-4 line-clamp-3">{excerpt}</p>
 					<Link
 						to={`/blog/${post.id}`}

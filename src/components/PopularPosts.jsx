@@ -70,6 +70,11 @@ const PopularPosts = ({ posts = [] }) => {
 					const thumbnailUrl =
 						extractFirstImage(post.blogContent) ||
 						"https://placehold.co/100x70/335833/FFF?text=Post";
+					const creatorAvatar =
+						post.creatorProfilePhoto ||
+						`https://ui-avatars.com/api/?name=${encodeURIComponent(
+							post.creatorUsername || "Anonymous",
+						)}&background=335833&color=fff`;
 
 					const displayTitle = getDisplayTitle(post);
 
@@ -90,7 +95,7 @@ const PopularPosts = ({ posts = [] }) => {
 							<img
 								src={thumbnailUrl}
 								alt={displayTitle}
-								className="w-24 h-16 object-cover rounded-md flex-shrink-0"
+								className="w-24 h-16 object-cover rounded-md shrink-0"
 								onError={(e) => {
 									e.target.src =
 										"https://placehold.co/100x70/335833/FFF?text=No+Image";
@@ -100,7 +105,22 @@ const PopularPosts = ({ posts = [] }) => {
 								<h4 className="text-sm font-semibold text-gray-800 group-hover:text-[#335833] transition-colors line-clamp-2">
 									{displayTitle}
 								</h4>
-								<p className="text-xs text-gray-500">{formattedDate}</p>
+								<div className="flex items-center gap-1.5 mt-1">
+									<img
+										src={creatorAvatar}
+										alt={post.creatorUsername || "Anonymous"}
+										className="w-5 h-5 rounded-full object-cover border border-gray-200"
+										onError={(e) => {
+											e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+												post.creatorUsername || "Anonymous",
+											)}&background=335833&color=fff`;
+										}}
+									/>
+									<p className="text-xs text-gray-500 line-clamp-1">
+										{post.creatorUsername || "Anonymous"}
+									</p>
+								</div>
+								<p className="text-xs text-gray-500 mt-0.5">{formattedDate}</p>
 							</div>
 						</Link>
 					);

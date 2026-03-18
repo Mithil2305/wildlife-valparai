@@ -95,16 +95,20 @@ const BlogDetail = () => {
 		}
 	}, [postId]);
 
-	const SocialLink = ({ icon: Icon, href, color }) => (
-		<a
-			href={href}
-			target="_blank"
-			rel="noopener noreferrer"
-			className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all duration-300 hover:scale-110 ${color}`}
-		>
-			<Icon size={20} />
-		</a>
-	);
+	const SocialLink = ({ icon, href, color }) => {
+		const IconComponent = icon;
+
+		return (
+			<a
+				href={href}
+				target="_blank"
+				rel="noopener noreferrer"
+				className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all duration-300 hover:scale-110 ${color}`}
+			>
+				<IconComponent size={20} />
+			</a>
+		);
+	};
 	const nextPost = () => {
 		setCurrentIndex((prev) => (prev === latestPosts.length - 1 ? 0 : prev + 1));
 	};
@@ -144,6 +148,21 @@ const BlogDetail = () => {
 							{/* Meta Info */}
 							<div className="flex items-center justify-between flex-wrap gap-3 text-sm text-gray-600 mb-6 pb-6 border-b border-gray-200">
 								<div className="flex items-center flex-wrap gap-2">
+									<img
+										src={
+											post.creatorProfilePhoto ||
+											`https://ui-avatars.com/api/?name=${encodeURIComponent(
+												post.creatorUsername || "Anonymous",
+											)}&background=335833&color=fff`
+										}
+										alt={post.creatorUsername || "Anonymous"}
+										className="w-8 h-8 rounded-full object-cover border border-gray-200"
+										onError={(e) => {
+											e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+												post.creatorUsername || "Anonymous",
+											)}&background=335833&color=fff`;
+										}}
+									/>
 									<Link
 										to={`/creator/${post.creatorId}`}
 										className="hover:text-[#335833] font-medium transition-colors"
