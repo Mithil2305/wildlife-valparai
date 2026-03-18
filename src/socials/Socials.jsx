@@ -192,7 +192,7 @@ const Socials = () => {
 	if (loading) return <LoadingSpinner />;
 
 	return (
-		<div className="min-h-screen bg-[#FAFAFA] pt-6 pb-12 px-4 md:px-6">
+		<div className="min-h-screen bg-[#FAFAFA] pt-6 pb-12 px-0 sm:px-4 md:px-6">
 			<div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
 				{/* --- Left Sidebar (Navigation) --- */}
 				<div className="hidden lg:block lg:col-span-3 xl:col-span-2 sticky top-24 h-fit">
@@ -219,18 +219,10 @@ const Socials = () => {
 				</div>
 
 				{/* --- Center Column (Feed) --- */}
-				<div className="col-span-1 lg:col-span-6 xl:col-span-7">
+				<div className="col-span-1 lg:col-span-6 xl:col-span-7 px-3 sm:px-0">
 					{/* Welcome Header (Mobile Only) */}
-					<div className="lg:hidden mb-6 flex justify-between items-center">
+					<div className="lg:hidden mb-6">
 						<h1 className="text-2xl font-bold text-gray-900">Social Feed</h1>
-						{user?.accountType === "creator" && (
-							<button
-								onClick={() => navigate("/upload/content")}
-								className="bg-[#335833] text-white p-2 rounded-full shadow-lg"
-							>
-								<AiOutlinePlus size={24} />
-							</button>
-						)}
 					</div>
 
 					{/* Posts Feed */}

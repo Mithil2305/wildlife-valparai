@@ -32,7 +32,6 @@ import PointsHistory from "./components/PointsHistory.jsx";
 // --- Blog Components ---
 import CreateBlog from "./blogs/CreateBlog.jsx";
 import BlogDetail from "./blogs/BlogDetail.jsx";
-import EditBlog from "./blogs/EditBlog.jsx";
 import ManageBlogs from "./blogs/ManageBlogs.jsx";
 
 // --- Socials Components ---
@@ -57,6 +56,7 @@ import LeaderboardPage from "./components/LeaderboardPage.jsx";
 import Advertise from "./components/Advertise.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import CreatorProfile from "./components/CreatorProfile.jsx";
+import TutorialCoach from "./components/TutorialCoach.jsx";
 // import CreateAdminTool from "./util/CreateAdminTool.jsx";
 
 /**
@@ -74,6 +74,68 @@ const ProtectedRoute = ({ user, redirectPath = "/login" }) => {
 const App = () => {
 	const [currentUser, setCurrentUser] = useState(null);
 	const [loading, setLoading] = useState(true);
+	const [isTutorialActive, setIsTutorialActive] = useState(false);
+	const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
+
+	const allTutorialSteps = [
+		{
+			selector: '[data-tutorial="nav-home"]',
+			title: "Home",
+			description:
+				"Use Home to see featured posts, updates, and latest community highlights.",
+		},
+		{
+			selector: '[data-tutorial="toggle-socials"]',
+			title: "Socials Toggle",
+			description:
+				"Switch to Socials for quick wildlife moments with photos, audio, and engagement.",
+		},
+		{
+			selector: '[data-tutorial="nav-about"]',
+			title: "About",
+			description:
+				"Open About to learn the mission, points ecosystem, and conservation impact model.",
+		},
+		{
+			selector: '[data-tutorial="nav-leaderboard"]',
+			title: "Leaderboard",
+			description:
+				"Go to Leaderboard to compare rankings and track top contributors.",
+		},
+		{
+			selector: '[data-tutorial="nav-sponsor"]',
+			title: "Sponsors",
+			description:
+				"Visit Sponsors to understand support programs and collaboration options.",
+		},
+		{
+			selector: '[data-tutorial="nav-create"]',
+			title: "Create",
+			description:
+				"Creators can use Create to publish articles or upload quick wildlife posts.",
+			requiresAuth: true,
+		},
+		{
+			selector: '[data-tutorial="nav-profile"]',
+			title: "Profile",
+			description:
+				"Use Profile to manage your account information, bio, and profile photo.",
+			requiresAuth: true,
+		},
+		{
+			selector: '[data-tutorial="nav-login"], [data-tutorial="nav-register"]',
+			title: "Login / Register",
+			description:
+				"Use Login or Register to access your account and join the community.",
+			requiresGuest: true,
+		},
+	];
+
+	const tutorialSteps = allTutorialSteps.filter(
+		(step) =>
+			(!step.requiresAuth || Boolean(currentUser)) &&
+			(!step.requiresGuest || !currentUser),
+	);
 
 	// Listen to auth state changes from firebase
 	useEffect(() => {
@@ -87,6 +149,34 @@ const App = () => {
 		return () => unsubscribe();
 	}, []);
 
+	useEffect(() => {
+		if (loading || isTutorialActive) return;
+		const completed = localStorage.getItem("wvTutorialCompleted") === "true";
+		if (!completed) {
+			setIsTutorialActive(true);
+			setTutorialStepIndex(0);
+		}
+	}, [loading, isTutorialActive]);
+
+	const finishTutorial = () => {
+		setIsTutorialActive(false);
+		localStorage.setItem("wvTutorialCompleted", "true");
+	};
+
+	const startTutorial = () => {
+		setIsTutorialActive(true);
+		setTutorialStepIndex(0);
+		localStorage.removeItem("wvTutorialCompleted");
+	};
+
+	const handleTutorialStepClick = () => {
+		if (tutorialStepIndex >= tutorialSteps.length - 1) {
+			finishTutorial();
+			return;
+		}
+		setTutorialStepIndex((prev) => prev + 1);
+	};
+
 	// Show a loading spinner while firebase is checking auth
 	if (loading) {
 		return <LoadingSpinner />;
@@ -99,7 +189,7 @@ const App = () => {
 				<ScrollToTop />
 				<Toaster position="top-center" reverseOrder={false} />{" "}
 				{/* Add Toaster here */}
-				<Navbar />
+				<Navbar onStartTutorial={startTutorial} />
 				<div className="grow">
 					<Routes>
 						{/* --- Public Routes --- */}
@@ -115,7 +205,7 @@ const App = () => {
 						{/* Blog Routes */}
 						<Route path="/blogs/manage" element={<ManageBlogs />} />
 						<Route path="/blog/:postId" element={<BlogDetail />} />
-						<Route path="/blog/edit/:postId" element={<EditBlog />} />
+						<Route path="/blog/edit/:postId" element={<CreateBlog />} />
 
 						{/* Socials Routes */}
 						<Route path="/socials" element={<Socials />} />
@@ -141,6 +231,10 @@ const App = () => {
 							<Route path="/dashboard/creator" element={<CreatorDashboard />} />
 							<Route path="/upload/content" element={<UploadContent />} />
 							<Route path="/upload/blog" element={<CreateBlog />} />
+							<Route
+								path="/upload/blog/edit/:postId"
+								element={<CreateBlog />}
+							/>
 							<Route path="/socials/manage" element={<ManageSocial />} />
 							{/* General User Features */}
 							<Route path="/points" element={<Points />} />
@@ -156,6 +250,14 @@ const App = () => {
 						{/* <Route path="/adminlogin" element={<CreateAdminTool />} /> */}
 					</Routes>
 				</div>
+				<TutorialCoach
+					active={isTutorialActive}
+					stepIndex={tutorialStepIndex}
+					totalSteps={tutorialSteps.length}
+					step={tutorialSteps[tutorialStepIndex]}
+					onStepClick={handleTutorialStepClick}
+					onSkip={finishTutorial}
+				/>
 				<Footer />
 			</main>
 		</ErrorBoundary>

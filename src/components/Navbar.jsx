@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
-import { FaBars, FaTimes, FaPlus, FaChevronDown } from "react-icons/fa";
+import {
+	FaBars,
+	FaTimes,
+	FaPlus,
+	FaChevronDown,
+	FaRegQuestionCircle,
+} from "react-icons/fa";
 import { HiDocumentText, HiPhotograph } from "react-icons/hi";
 
 // Import auth functions
@@ -11,7 +17,6 @@ import {
 	getDoc,
 } from "../services/firebase.js";
 import { signOut } from "../services/authApi.js";
-import Leaderboard from "./Leaderboard.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 
 /**
@@ -24,6 +29,8 @@ const BlogSocialToggle = ({ isSocials, onToggle }) => {
 		<div className="flex items-center gap-1 bg-gray-100/80 p-1 rounded-full border border-gray-200/50 shadow-inner backdrop-blur-sm">
 			<button
 				onClick={() => isSocials && onToggle()}
+				title="Blogs: Read detailed wildlife stories and guides"
+				data-tutorial="toggle-blogs"
 				className={`px-4 py-1.5 rounded-full text-[14px] font-bold cursor-pointer transition-all duration-300 ${
 					!isSocials
 						? "bg-[#335833] text-white shadow-sm ring-1 ring-gray-900/5"
@@ -34,6 +41,8 @@ const BlogSocialToggle = ({ isSocials, onToggle }) => {
 			</button>
 			<button
 				onClick={() => !isSocials && onToggle()}
+				title="Socials: Explore quick wildlife photo and audio posts"
+				data-tutorial="toggle-socials"
 				className={`px-4 py-1.5 rounded-full text-[14px] cursor-pointer font-bold transition-all duration-300 ${
 					isSocials
 						? "bg-[#335833] text-white shadow-sm ring-1 ring-gray-900/5"
@@ -65,6 +74,8 @@ const CreatePostDropdown = ({ onClose }) => {
 		<div className="relative cursor-pointer">
 			<button
 				onClick={() => setIsOpen(!isOpen)}
+				title="Create: Choose article or social post upload"
+				data-tutorial="nav-create"
 				className="flex cursor-pointer items-center gap-2 bg-[#335833] text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-[#2a4a2a] transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 ring-2 ring-offset-2 ring-[#335833]/20"
 			>
 				<FaPlus className="text-[10px]" />
@@ -91,6 +102,7 @@ const CreatePostDropdown = ({ onClose }) => {
 						</div>
 						<button
 							onClick={() => handleNavigation("/upload/blog")}
+							title="Write Article: Publish a long-form wildlife post"
 							className="w-full flex cursor-pointer items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors text-left group"
 						>
 							<div className="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-100 transition-colors group-hover:scale-110 duration-200">
@@ -108,6 +120,7 @@ const CreatePostDropdown = ({ onClose }) => {
 
 						<button
 							onClick={() => handleNavigation("/upload/content")}
+							title="Upload Post: Share a quick wildlife moment"
 							className="cursor-pointer w-full flex items-center gap-4 px-4 py-3.5 hover:bg-gray-50 transition-colors text-left group"
 						>
 							<div className="w-10 h-10 flex items-center justify-center bg-green-50 text-green-600 rounded-xl group-hover:bg-green-100 transition-colors group-hover:scale-110 duration-200">
@@ -134,7 +147,7 @@ const CreatePostDropdown = ({ onClose }) => {
  * @component Navbar
  * ----------------------------------------------------------------
  */
-const Navbar = () => {
+const Navbar = ({ onStartTutorial = () => {} }) => {
 	const [currentUser, setCurrentUser] = useState(null);
 	const [userProfile, setUserProfile] = useState(null);
 	const [isOpen, setIsOpen] = useState(false);
@@ -219,10 +232,10 @@ const Navbar = () => {
 
 	return (
 		<nav
-			className={`sticky top-0 left-0 w-full z-50 transition-all duration-500 border-b ${
+			className={`sticky top-0 left-0 w-full z-50 transition-all duration-500 border-b py-3 ${
 				scrolled
-					? "bg-white/80 backdrop-blur-xl border-gray-200/60 shadow-sm py-2"
-					: "bg-white border-transparent py-4"
+					? "bg-white/80 backdrop-blur-xl border-gray-200/60 shadow-sm"
+					: "bg-white border-transparent"
 			}`}
 		>
 			<div className="container mx-auto max-w-7xl px-4 md:px-6">
@@ -246,6 +259,8 @@ const Navbar = () => {
 						<div className="flex items-center gap-1 text-sm">
 							<NavLink
 								to="/"
+								title="Home: Highlights, updates, and featured content"
+								data-tutorial="nav-home"
 								className={({ isActive }) =>
 									isActive && !isSocials ? activeLink : inactiveLink
 								}
@@ -254,6 +269,8 @@ const Navbar = () => {
 							</NavLink>
 							<NavLink
 								to="/about"
+								title="About: Mission, points, and how the app works"
+								data-tutorial="nav-about"
 								className={({ isActive }) =>
 									isActive ? activeLink : inactiveLink
 								}
@@ -262,6 +279,8 @@ const Navbar = () => {
 							</NavLink>
 							<NavLink
 								to="/sponsor"
+								title="Sponsors: Partner and support opportunities"
+								data-tutorial="nav-sponsor"
 								className={({ isActive }) =>
 									isActive ? activeLink : inactiveLink
 								}
@@ -270,12 +289,23 @@ const Navbar = () => {
 							</NavLink>
 							<NavLink
 								to="/leaderboard"
+								title="Leaderboard: Track top users and rankings"
+								data-tutorial="nav-leaderboard"
 								className={({ isActive }) =>
 									isActive ? activeLink : inactiveLink
 								}
 							>
 								Leaderboard
 							</NavLink>
+							<button
+								onClick={onStartTutorial}
+								className="text-gray-500 hover:text-[#335833] p-2 rounded-lg hover:bg-green-50 transition-colors"
+								title="Tutorial: Visit key pages and see what each section does"
+								aria-label="Start tutorial"
+								data-tutorial="nav-tutorial"
+							>
+								<FaRegQuestionCircle size={16} />
+							</button>
 						</div>
 
 						<div className="h-6 w-px bg-gray-200 mx-2"></div>
@@ -324,6 +354,15 @@ const Navbar = () => {
 					</Link>
 
 					<div className="flex items-center gap-3">
+						<button
+							onClick={onStartTutorial}
+							className="w-8 h-8 text-[#335833] bg-green-50 rounded-full flex items-center justify-center shadow-sm active:scale-90 transition-transform"
+							title="Tutorial: Visit key pages and see what each section does"
+							aria-label="Start tutorial"
+						>
+							<FaRegQuestionCircle size={12} />
+						</button>
+
 						{/* Show Create button on mobile header if creator */}
 						{currentUser && isCreator && !isOpen && (
 							<div className="relative" data-mobile-create-menu>
@@ -332,6 +371,8 @@ const Navbar = () => {
 										e.stopPropagation();
 										setIsMobileCreateOpen((prev) => !prev);
 									}}
+									title="Create: Choose article or social post upload"
+									data-tutorial="nav-create"
 									className="w-8 h-8 bg-[#335833] text-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform"
 									aria-label="Open create options"
 								>
@@ -341,6 +382,7 @@ const Navbar = () => {
 								{isMobileCreateOpen && (
 									<div className="absolute right-0 mt-2 w-52 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-100 py-2 z-30 overflow-hidden ring-1 ring-black/5">
 										<button
+											data-tutorial="nav-tutorial"
 											onClick={() =>
 												handleMobileCreateNavigation("/upload/blog")
 											}
@@ -372,6 +414,7 @@ const Navbar = () => {
 								setIsOpen(!isOpen);
 								setIsMobileCreateOpen(false);
 							}}
+							title="Menu: Open navigation links"
 							className="text-gray-800 text-xl p-2 hover:bg-gray-100 rounded-xl transition-colors"
 							aria-label="Toggle menu"
 						>
@@ -395,6 +438,8 @@ const Navbar = () => {
 
 					<NavLink
 						to="/"
+						title="Home: Highlights, updates, and featured content"
+						data-tutorial="nav-home"
 						className={({ isActive }) =>
 							`block px-4 py-3 rounded-xl font-bold transition-all ${
 								isActive && !isSocials
@@ -408,6 +453,8 @@ const Navbar = () => {
 					</NavLink>
 					<NavLink
 						to="/about"
+						title="About: Mission, points, and how the app works"
+						data-tutorial="nav-about"
 						className={({ isActive }) =>
 							`block px-4 py-3 rounded-xl font-bold transition-all ${
 								isActive
@@ -421,6 +468,7 @@ const Navbar = () => {
 					</NavLink>
 					<NavLink
 						to="/contact"
+						title="Contact: Reach support and share feedback"
 						className={({ isActive }) =>
 							`block px-4 py-3 rounded-xl font-bold transition-all ${
 								isActive
@@ -434,6 +482,8 @@ const Navbar = () => {
 					</NavLink>
 					<NavLink
 						to="/sponsor"
+						title="Sponsors: Partner and support opportunities"
+						data-tutorial="nav-sponsor"
 						className={({ isActive }) =>
 							`block px-4 py-3 rounded-xl font-bold transition-all ${
 								isActive
@@ -446,12 +496,26 @@ const Navbar = () => {
 						Sponsors
 					</NavLink>
 
+					<button
+						onClick={() => {
+							onStartTutorial();
+							closeMobileMenu();
+						}}
+						className="w-full py-3 text-[#335833] font-bold bg-green-50 hover:bg-green-100 rounded-xl transition-colors text-sm"
+						title="Tutorial: Visit key pages and see what each section does"
+						data-tutorial="nav-tutorial"
+					>
+						Start Tutorial
+					</button>
+
 					{/* Mobile User Actions */}
 					<div className="pt-4 border-t border-gray-100">
 						{currentUser ? (
 							<div className="flex flex-col gap-3">
 								<Link
 									to="/profile"
+									title="My Profile: Manage your account details"
+									data-tutorial="nav-profile"
 									className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl"
 									onClick={closeMobileMenu}
 								>
@@ -474,6 +538,7 @@ const Navbar = () => {
 									<div className="grid grid-cols-2 gap-3">
 										<Link
 											to="/upload/blog"
+											title="Write Article: Publish a long-form wildlife post"
 											onClick={closeMobileMenu}
 											className="flex flex-col items-center justify-center p-4 bg-blue-50/50 border border-blue-100 text-blue-700 rounded-2xl font-bold text-xs gap-2 active:scale-95 transition-transform"
 										>
@@ -482,6 +547,7 @@ const Navbar = () => {
 										</Link>
 										<Link
 											to="/upload/content"
+											title="Upload Post: Share a quick wildlife moment"
 											onClick={closeMobileMenu}
 											className="flex flex-col items-center justify-center p-4 bg-green-50/50 border border-green-100 text-green-700 rounded-2xl font-bold text-xs gap-2 active:scale-95 transition-transform"
 										>
@@ -493,6 +559,7 @@ const Navbar = () => {
 
 								<button
 									onClick={handleLogout}
+									title="Log Out: Sign out of your account"
 									className="w-full py-3 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors text-sm"
 								>
 									Log Out
@@ -502,6 +569,8 @@ const Navbar = () => {
 							<div className="flex flex-col gap-3">
 								<Link
 									to="/login"
+									title="Log In: Access your account"
+									data-tutorial="nav-login"
 									className="w-full py-3 text-center text-gray-700 font-bold hover:bg-gray-50 rounded-xl border border-gray-200 transition-colors"
 									onClick={closeMobileMenu}
 								>
@@ -509,6 +578,8 @@ const Navbar = () => {
 								</Link>
 								<Link
 									to="/register"
+									title="Sign Up: Create your account"
+									data-tutorial="nav-register"
 									className="w-full py-3 text-center bg-[#335833] text-white font-bold rounded-xl shadow-md active:scale-95 transition-all"
 									onClick={closeMobileMenu}
 								>

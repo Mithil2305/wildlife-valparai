@@ -86,7 +86,7 @@ const ManageBlogs = () => {
 											<FaEye />
 										</button>
 										<button
-											onClick={() => navigate(`/blog/edit/${post.id}`)}
+											onClick={() => navigate(`/upload/blog/edit/${post.id}`)}
 											className="p-2 text-sm text-blue-600 bg-white border rounded-lg hover:bg-gray-100 transition-colors"
 											title="Edit Post"
 										>

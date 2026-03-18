@@ -15,6 +15,12 @@ import React, { useEffect, useRef, useCallback } from "react";
  */
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
 
+const isLocalhostDev = () => {
+	if (typeof window === "undefined") return false;
+	const host = window.location.hostname;
+	return host === "localhost" || host === "127.0.0.1" || host === "::1";
+};
+
 const CloudflareTurnstile = ({
 	onVerify,
 	onExpire,
@@ -47,6 +53,12 @@ const CloudflareTurnstile = ({
 	);
 
 	useEffect(() => {
+		// Always bypass Turnstile on localhost dev URLs.
+		if (isLocalhostDev()) {
+			onVerify?.("dev-bypass");
+			return;
+		}
+
 		if (!SITE_KEY) {
 			console.warn(
 				"Cloudflare Turnstile: VITE_TURNSTILE_SITE_KEY is not set. CAPTCHA will be skipped.",
@@ -112,7 +124,7 @@ const CloudflareTurnstile = ({
 		}
 	}, []);
 
-	if (!SITE_KEY) {
+	if (!SITE_KEY || isLocalhostDev()) {
 		return null; // Don't render anything if no site key (dev mode)
 	}
 

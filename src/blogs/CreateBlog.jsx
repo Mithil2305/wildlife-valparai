@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { getAuthInstance, getUserDoc, getDoc } from "../services/firebase.js";
-import { createBlogPost } from "../services/uploadPost.js";
+import {
+	createBlogPost,
+	getPost,
+	updateBlogPost,
+} from "../services/uploadPost.js";
 import toast from "react-hot-toast";
 import { verifyCaptcha } from "../services/workerApi.js";
 import CloudflareTurnstile from "../components/CloudflareTurnstile.jsx";
@@ -30,21 +34,25 @@ import { IoChevronUp, IoChevronDown } from "react-icons/io5";
 import { FiFolder, FiSettings, FiX } from "react-icons/fi"; // Added FiSettings and FiX
 
 // --- Toolbar Component ---
-const ToolbarButton = ({ onClick, icon: Icon, title, active = false }) => (
-	<button
-		type="button"
-		onMouseDown={(e) => {
-			e.preventDefault();
-			onClick(e);
-		}}
-		title={title}
-		className={`p-2 rounded hover:bg-gray-200 transition-colors text-gray-700 text-base w-8 h-8 flex items-center justify-center shrink-0 ${
-			active ? "bg-gray-300 font-bold shadow-inner" : ""
-		}`}
-	>
-		<Icon size={18} />
-	</button>
-);
+const ToolbarButton = ({ onClick, icon, title, active = false }) => {
+	const IconComponent = icon;
+
+	return (
+		<button
+			type="button"
+			onMouseDown={(e) => {
+				e.preventDefault();
+				onClick(e);
+			}}
+			title={title}
+			className={`p-2 rounded hover:bg-gray-200 transition-colors text-gray-700 text-base w-8 h-8 flex items-center justify-center shrink-0 ${
+				active ? "bg-gray-300 font-bold shadow-inner" : ""
+			}`}
+		>
+			<IconComponent size={18} />
+		</button>
+	);
+};
 
 const Divider = () => (
 	<div className="w-px h-5 bg-gray-300 mx-1 self-center opacity-50 shrink-0" />
@@ -173,6 +181,8 @@ const CreateBlog = () => {
 	const [labels, setLabels] = useState("");
 	const [user, setUser] = useState(null);
 	const [loading, setLoading] = useState(false);
+	const [initializing, setInitializing] = useState(false);
+	const [pendingEditorHydration, setPendingEditorHydration] = useState(false);
 	const [lastSaved, setLastSaved] = useState(null);
 	const [activeSection, setActiveSection] = useState("Labels");
 	const [captchaToken, setCaptchaToken] = useState("");
@@ -181,10 +191,20 @@ const CreateBlog = () => {
 	const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
 	const [imageUploading, setImageUploading] = useState(false);
 
+	const { postId } = useParams();
+	const isEditMode = Boolean(postId);
 	const navigate = useNavigate();
 	const editorRef = useRef(null);
 	const imageInputRef = useRef(null);
 	const auth = getAuthInstance();
+
+	const trimOuterSpacesOnly = (value) =>
+		value.replace(/^[\s\u00A0]+|[\s\u00A0]+$/g, "");
+
+	useEffect(() => {
+		setPendingEditorHydration(false);
+		setInitializing(Boolean(postId));
+	}, [postId]);
 
 	// --- 1. User Auth ---
 	useEffect(() => {
@@ -194,16 +214,40 @@ const CreateBlog = () => {
 				const userSnap = await getDoc(userRef);
 				if (userSnap.exists()) {
 					setUser(userSnap.data());
+
+					if (isEditMode && postId) {
+						setInitializing(true);
+						const postData = await getPost(postId);
+						if (!postData) {
+							toast.error("Post not found.");
+							navigate("/dashboard/creator");
+							setInitializing(false);
+							return;
+						}
+
+						if (postData.creatorId !== currentUser.uid) {
+							toast.error("You are not authorized to edit this post.");
+							navigate("/dashboard/creator");
+							setInitializing(false);
+							return;
+						}
+
+						setTitle(postData.title || "");
+						setContent(postData.blogContent || "");
+						setPendingEditorHydration(true);
+						setInitializing(false);
+					}
 				}
 			} else {
 				navigate("/login");
 			}
 		});
 		return () => unsubscribe();
-	}, [navigate, auth]);
+	}, [navigate, auth, isEditMode, postId]);
 
 	// --- 2. Draft System (Auto-Save & Load) ---
 	useEffect(() => {
+		if (isEditMode) return;
 		const savedDraft = localStorage.getItem("blogDraft");
 		if (savedDraft) {
 			try {
@@ -223,9 +267,10 @@ const CreateBlog = () => {
 				console.error("Error parsing draft", e);
 			}
 		}
-	}, []);
+	}, [isEditMode]);
 
 	useEffect(() => {
+		if (isEditMode) return;
 		const saveTimer = setTimeout(() => {
 			if (title || content) {
 				localStorage.setItem("blogDraft", JSON.stringify({ title, content }));
@@ -233,7 +278,15 @@ const CreateBlog = () => {
 			}
 		}, 1000);
 		return () => clearTimeout(saveTimer);
-	}, [title, content]);
+	}, [title, content, isEditMode]);
+
+	useEffect(() => {
+		if (!isEditMode || initializing || !pendingEditorHydration) return;
+		if (!editorRef.current) return;
+
+		editorRef.current.innerHTML = content || "";
+		setPendingEditorHydration(false);
+	}, [isEditMode, initializing, pendingEditorHydration, content]);
 
 	// --- 3. Editor Commands ---
 	const formatDoc = (cmd, value = null) => {
@@ -332,12 +385,19 @@ const CreateBlog = () => {
 
 	// --- 4. Submit Handler ---
 	const handleSubmit = async () => {
-		if (!title || !content || !user) {
+		const normalizedTitle = trimOuterSpacesOnly(title || "");
+		const normalizedContent = trimOuterSpacesOnly(content || "");
+		const plainTextContent = normalizedContent
+			.replace(/<[^>]*>/g, "")
+			.replace(/&nbsp;/g, " ")
+			.trim();
+
+		if (!normalizedTitle || !plainTextContent || !user) {
 			toast.error("Please add a title and some content.");
 			return;
 		}
 
-		if (!captchaToken) {
+		if (!isEditMode && !captchaToken) {
 			toast.error(
 				"Please complete the CAPTCHA verification before publishing.",
 			);
@@ -346,29 +406,40 @@ const CreateBlog = () => {
 
 		setLoading(true);
 
-		try {
-			await verifyCaptcha(captchaToken);
-		} catch {
-			toast.error("CAPTCHA verification failed. Please try again.");
-			setLoading(false);
-			return;
+		if (!isEditMode) {
+			try {
+				await verifyCaptcha(captchaToken);
+			} catch {
+				toast.error("CAPTCHA verification failed. Please try again.");
+				setLoading(false);
+				return;
+			}
 		}
 
-		const blogPromise = createBlogPost({
-			creatorId: auth?.currentUser?.uid,
-			creatorUsername: user.username,
-			creatorProfilePhoto: user.profilePhotoUrl || "",
-			title,
-			blogContent: content,
-		});
+		const blogPromise = isEditMode
+			? updateBlogPost(postId, {
+					title: normalizedTitle,
+					blogContent: normalizedContent,
+				})
+			: createBlogPost({
+					creatorId: auth?.currentUser?.uid,
+					creatorUsername: user.username,
+					creatorProfilePhoto: user.profilePhotoUrl || "",
+					title: normalizedTitle,
+					blogContent: normalizedContent,
+				});
 
 		toast.promise(blogPromise, {
-			loading: "Publishing post...",
+			loading: isEditMode ? "Saving changes..." : "Publishing post...",
 			success: () => {
 				setLoading(false);
-				localStorage.removeItem("blogDraft");
+				if (!isEditMode) localStorage.removeItem("blogDraft");
 				navigate("/dashboard/creator");
-				return <b>Published successfully!</b>;
+				return (
+					<b>
+						{isEditMode ? "Updated successfully!" : "Published successfully!"}
+					</b>
+				);
 			},
 			error: (err) => {
 				setLoading(false);
@@ -381,11 +452,22 @@ const CreateBlog = () => {
 		setActiveSection(activeSection === section ? null : section);
 	};
 
+	if (initializing) {
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-gray-100">
+				<div className="text-sm text-gray-600">Loading blog editor...</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
 			{/* --- Header --- */}
 			<header className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 flex justify-between items-center shrink-0 z-20 gap-2">
-				<div className="flex flex-col md:flex-row md:items-baseline md:gap-4 flex-grow min-w-0">
+				<div className="flex flex-col md:flex-row md:items-baseline md:gap-4 grow min-w-0">
+					<p className="text-xs font-semibold text-[#335833] uppercase tracking-wide">
+						{isEditMode ? "Edit Blog" : "Create Blog"}
+					</p>
 					<input
 						type="text"
 						placeholder="Post Title"
@@ -418,10 +500,16 @@ const CreateBlog = () => {
 					<button
 						type="button"
 						onClick={handleSubmit}
-						disabled={loading || !captchaToken}
+						disabled={loading || (!isEditMode && !captchaToken)}
 						className="flex items-center gap-2 px-3 md:px-4 py-1.5 bg-[#335833] text-white rounded hover:bg-opacity-90 transition-all text-sm font-bold shadow-sm disabled:opacity-50"
 					>
-						{loading ? "Publishing..." : "Publish"}
+						{loading
+							? isEditMode
+								? "Saving..."
+								: "Publishing..."
+							: isEditMode
+								? "Save Changes"
+								: "Publish"}
 						{!loading && <AiOutlineSend size={16} />}
 					</button>
 
@@ -437,9 +525,9 @@ const CreateBlog = () => {
 			</header>
 
 			{/* --- Workspace (Editor + Sidebar) --- */}
-			<div className="flex flex-grow overflow-hidden relative">
+			<div className="flex grow overflow-hidden relative">
 				{/* --- Main Editor Column --- */}
-				<main className="flex-grow flex flex-col bg-white shadow-sm md:m-4 m-0 md:rounded-lg border-x md:border-y border-gray-200 overflow-hidden relative">
+				<main className="grow flex flex-col bg-white shadow-sm md:m-4 m-0 md:rounded-lg border-x md:border-y border-gray-200 overflow-hidden relative">
 					{/* Toolbar (Scrollable on mobile) */}
 					<div className="bg-gray-50 border-b border-gray-200 px-2 md:px-3 py-2 flex items-center gap-1 shrink-0 overflow-x-auto no-scrollbar touch-pan-x">
 						<ToolbarButton
@@ -569,16 +657,18 @@ const CreateBlog = () => {
 							labels={labels}
 							setLabels={setLabels}
 						/>
-						<div className="mt-6 pt-4 border-t border-gray-200">
-							<h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">
-								Verification
-							</h3>
-							<CloudflareTurnstile
-								onVerify={setCaptchaToken}
-								theme="light"
-								size="normal"
-							/>
-						</div>
+						{!isEditMode && (
+							<div className="mt-6 pt-4 border-t border-gray-200">
+								<h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">
+									Verification
+								</h3>
+								<CloudflareTurnstile
+									onVerify={setCaptchaToken}
+									theme="light"
+									size="normal"
+								/>
+							</div>
+						)}
 					</div>
 				</aside>
 
@@ -609,16 +699,18 @@ const CreateBlog = () => {
 									labels={labels}
 									setLabels={setLabels}
 								/>
-								<div className="mt-6 pt-4 border-t border-gray-200">
-									<h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">
-										Verification
-									</h3>
-									<CloudflareTurnstile
-										onVerify={setCaptchaToken}
-										theme="light"
-										size="compact"
-									/>
-								</div>
+								{!isEditMode && (
+									<div className="mt-6 pt-4 border-t border-gray-200">
+										<h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">
+											Verification
+										</h3>
+										<CloudflareTurnstile
+											onVerify={setCaptchaToken}
+											theme="light"
+											size="compact"
+										/>
+									</div>
+								)}
 							</div>
 						</div>
 					</div>

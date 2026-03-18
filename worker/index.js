@@ -16,8 +16,16 @@ const ALLOWED_ORIGINS = [
 	"https://wildlife-valparai.vercel.app",
 	"https://wildlifevalparai.com",
 	"https://www.wildlifevalparai.com",
-	"http://localhost:5173/login",
 ];
+
+function isLocalDevOrigin(origin) {
+	if (!origin) return false;
+	return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(origin);
+}
+
+function isAllowedOrigin(origin) {
+	return ALLOWED_ORIGINS.includes(origin) || isLocalDevOrigin(origin);
+}
 
 // Rate limiting configuration (requests per window)
 const RATE_LIMITS = {
@@ -264,9 +272,7 @@ function rateLimitResponse(rateLimitResult, origin) {
  */
 function corsHeaders(origin, additionalHeaders = {}) {
 	// Check if origin is allowed
-	const allowedOrigin = ALLOWED_ORIGINS.includes(origin)
-		? origin
-		: ALLOWED_ORIGINS[0];
+	const allowedOrigin = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
 
 	return {
 		"Access-Control-Allow-Origin": allowedOrigin,
@@ -322,6 +328,13 @@ function isValidMimeType(mimeType, fileType) {
  */
 async function handleCaptchaVerify(request, env, origin, clientIP) {
 	try {
+		if (isLocalDevOrigin(origin)) {
+			return new Response(JSON.stringify({ success: true, bypassed: true }), {
+				status: 200,
+				headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+			});
+		}
+
 		const body = await request.json();
 		const { token } = body;
 

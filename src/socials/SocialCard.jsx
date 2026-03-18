@@ -285,12 +285,12 @@ const SocialCard = ({ post, onUpdate }) => {
 				</div>
 			)}
 
-			{/* 3. Media: Image (16:9 Aspect Ratio) */}
-			<div className="w-full aspect-video bg-gray-100 relative overflow-hidden">
+			{/* 3. Media: Image */}
+			<div className="w-full bg-gray-100 relative overflow-hidden">
 				<img
 					src={post.photoUrl || "https://placehold.co/800x450?text=No+Image"}
 					alt={post.title}
-					className="w-full h-full object-cover"
+					className="w-full h-auto object-contain"
 				/>
 			</div>
 

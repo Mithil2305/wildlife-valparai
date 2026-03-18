@@ -15,6 +15,12 @@ import {
 	PenLine,
 	HelpCircle,
 	ChevronDown,
+	BookOpen,
+	Compass,
+	CheckCircle2,
+	Upload,
+	Trophy,
+	Bell,
 } from "lucide-react";
 
 // --- Animations ---
@@ -52,7 +58,7 @@ const FeatureCard = ({
 		<div
 			className={`absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-10 ${colorClass.replace(
 				"text-",
-				"bg-"
+				"bg-",
 			)} blur-2xl group-hover:scale-150 transition-transform duration-700`}
 		></div>
 
@@ -132,6 +138,36 @@ const FAQItem = ({ question, answer }) => {
 		</motion.div>
 	);
 };
+
+const TutorialStep = ({ step, title, description, tips = [] }) => (
+	<motion.div
+		variants={itemVariants}
+		className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm"
+	>
+		<div className="flex items-start gap-4">
+			<div className="w-10 h-10 rounded-full bg-[#335833] text-white flex items-center justify-center font-black text-sm shrink-0">
+				{step}
+			</div>
+			<div className="min-w-0">
+				<h3 className="text-xl font-bold text-gray-900">{title}</h3>
+				<p className="text-gray-600 mt-2 leading-relaxed">{description}</p>
+				{tips.length > 0 && (
+					<div className="mt-4 space-y-2">
+						{tips.map((tip, index) => (
+							<div key={index} className="flex items-start gap-2 text-sm">
+								<CheckCircle2
+									className="text-green-600 mt-0.5 shrink-0"
+									size={16}
+								/>
+								<span className="text-gray-700">{tip}</span>
+							</div>
+						))}
+					</div>
+				)}
+			</div>
+		</div>
+	</motion.div>
+);
 
 const About = () => {
 	return (
@@ -416,6 +452,147 @@ const About = () => {
 									Deleting a post removes all points earned from it (including
 									engagement points). Unliking or deleting a comment also
 									deducts the points originally awarded.
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			{/* --- New User Tutorial Section --- */}
+			<section className="py-20 bg-[#F4F7F4] border-y border-gray-100">
+				<div className="container mx-auto max-w-6xl px-4">
+					<div className="text-center mb-12">
+						<div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 text-[#335833] font-semibold text-sm mb-5">
+							<BookOpen size={16} />
+							New User Guide
+						</div>
+						<h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">
+							Complete Tutorial: How To Use Wildlife Valparai
+						</h2>
+						<p className="text-gray-600 max-w-3xl mx-auto leading-relaxed">
+							Wildlife Valparai is a community platform where people discover
+							local wildlife stories, upload photo + audio moments, write blogs,
+							follow creators, and earn points on a live leaderboard. Follow
+							these simple steps to get started from day one.
+						</p>
+					</div>
+
+					<motion.div
+						variants={containerVariants}
+						initial="hidden"
+						whileInView="visible"
+						viewport={{ once: true }}
+						className="grid grid-cols-1 md:grid-cols-2 gap-6"
+					>
+						<TutorialStep
+							step="1"
+							title="Create Your Account"
+							description="Sign up with your details and log in. Every user can browse content, like, comment, and follow creators."
+							tips={[
+								"Use a clear name and profile photo so other users can recognize you.",
+								"Keep your account details updated from the profile page.",
+							]}
+						/>
+
+						<TutorialStep
+							step="2"
+							title="Explore The App Sections"
+							description="Switch between Blogs and Socials from the top navbar. Blogs are long stories. Socials are fast visual moments with optional nature audio."
+							tips={[
+								"Use Home to discover featured content.",
+								"Use Socials for quick wildlife updates and sounds.",
+							]}
+						/>
+
+						<TutorialStep
+							step="3"
+							title="Upgrade To Creator"
+							description="If you want to publish content, request creator access from your account flow. Once approved, content upload options become available."
+							tips={[
+								"Creators can upload social posts and publish blogs.",
+								"Quality and originality help you grow faster.",
+							]}
+						/>
+
+						<TutorialStep
+							step="4"
+							title="Upload Your First Wildlife Post"
+							description="Use Upload Post to add a wildlife photo and optional audio. Add a clear caption so viewers understand the context and location story."
+							tips={[
+								"Best results come from clear, well-lit images.",
+								"Short ambient audio clips increase engagement.",
+							]}
+						/>
+
+						<TutorialStep
+							step="5"
+							title="Write Detailed Articles"
+							description="Use Write Article for deeper stories such as species notes, local travel experiences, conservation updates, and field observations."
+							tips={[
+								"Use a strong title and clear cover image.",
+								"Break long text into readable sections.",
+							]}
+						/>
+
+						<TutorialStep
+							step="6"
+							title="Grow With Engagement"
+							description="Like, comment, share, and follow creators to build community. Engagement helps both viewers and creators earn points."
+							tips={[
+								"Meaningful comments improve content quality.",
+								"Share posts responsibly with proper context.",
+							]}
+						/>
+					</motion.div>
+
+					<div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-5">
+						<div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+							<div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-3">
+								<Compass size={20} />
+							</div>
+							<h4 className="font-bold text-gray-900 mb-2">Discover</h4>
+							<p className="text-sm text-gray-600 leading-relaxed">
+								Browse blogs, social posts, creator profiles, and community
+								updates from across Valparai.
+							</p>
+						</div>
+
+						<div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+							<div className="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center mb-3">
+								<Upload size={20} />
+							</div>
+							<h4 className="font-bold text-gray-900 mb-2">Create</h4>
+							<p className="text-sm text-gray-600 leading-relaxed">
+								Publish photo + audio moments and articles as a creator to build
+								your portfolio and audience.
+							</p>
+						</div>
+
+						<div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+							<div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-3">
+								<Trophy size={20} />
+							</div>
+							<h4 className="font-bold text-gray-900 mb-2">Earn</h4>
+							<p className="text-sm text-gray-600 leading-relaxed">
+								Track points, climb the leaderboard, and become eligible for
+								monthly recognition and cash prizes.
+							</p>
+						</div>
+					</div>
+
+					<div className="mt-8 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+						<div className="flex items-start gap-3">
+							<div className="w-10 h-10 rounded-xl bg-[#335833] text-white flex items-center justify-center shrink-0">
+								<Bell size={18} />
+							</div>
+							<div>
+								<h4 className="font-bold text-gray-900">Important Tips</h4>
+								<p className="text-sm text-gray-600 mt-2 leading-relaxed">
+									Use original media, avoid harmful content, and keep
+									interactions respectful. If you undo actions like unliking or
+									deleting content, points may be reversed to keep the
+									leaderboard fair.
 								</p>
 							</div>
 						</div>
