@@ -138,6 +138,7 @@ const Navbar = () => {
 	const [currentUser, setCurrentUser] = useState(null);
 	const [userProfile, setUserProfile] = useState(null);
 	const [isOpen, setIsOpen] = useState(false);
+	const [isMobileCreateOpen, setIsMobileCreateOpen] = useState(false);
 	const [scrolled, setScrolled] = useState(false);
 
 	const location = useLocation();
@@ -178,19 +179,36 @@ const Navbar = () => {
 		};
 		window.addEventListener("scroll", handleScroll);
 
+		const handleDocumentClick = (event) => {
+			if (!event.target.closest("[data-mobile-create-menu]")) {
+				setIsMobileCreateOpen(false);
+			}
+		};
+		document.addEventListener("click", handleDocumentClick);
+
 		return () => {
 			unsubscribe();
 			window.removeEventListener("scroll", handleScroll);
+			document.removeEventListener("click", handleDocumentClick);
 		};
 	}, []);
 
 	const handleLogout = () => {
 		signOut();
 		setIsOpen(false);
+		setIsMobileCreateOpen(false);
 		setUserProfile(null);
 	};
 
-	const closeMobileMenu = () => setIsOpen(false);
+	const closeMobileMenu = () => {
+		setIsOpen(false);
+		setIsMobileCreateOpen(false);
+	};
+
+	const handleMobileCreateNavigation = (path) => {
+		navigate(path);
+		setIsMobileCreateOpen(false);
+	};
 	const isCreator = userProfile?.accountType === "creator";
 
 	// Styles
@@ -308,16 +326,44 @@ const Navbar = () => {
 					<div className="flex items-center gap-3">
 						{/* Show Create button on mobile header if creator */}
 						{currentUser && isCreator && !isOpen && (
-							<button
-								onClick={() => navigate("/upload/content")}
-								className="w-8 h-8 bg-[#335833] text-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform"
-							>
-								<FaPlus size={12} />
-							</button>
+							<div className="relative" data-mobile-create-menu>
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										setIsMobileCreateOpen((prev) => !prev);
+									}}
+									className="w-8 h-8 bg-[#335833] text-white rounded-full flex items-center justify-center shadow-md active:scale-90 transition-transform"
+									aria-label="Open create options"
+								>
+									<FaPlus size={12} />
+								</button>
+
+								{isMobileCreateOpen && (
+									<div className="absolute right-0 mt-2 w-52 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-100 py-2 z-30 overflow-hidden ring-1 ring-black/5">
+										<button
+											onClick={() => handleMobileCreateNavigation("/upload/blog")}
+											className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+										>
+											<HiDocumentText className="text-blue-600" size={18} />
+											<span className="font-bold text-sm text-gray-800">Write Article</span>
+										</button>
+										<button
+											onClick={() => handleMobileCreateNavigation("/upload/content")}
+											className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+										>
+											<HiPhotograph className="text-green-600" size={18} />
+											<span className="font-bold text-sm text-gray-800">Upload Post</span>
+										</button>
+									</div>
+								)}
+							</div>
 						)}
 
 						<button
-							onClick={() => setIsOpen(!isOpen)}
+							onClick={() => {
+								setIsOpen(!isOpen);
+								setIsMobileCreateOpen(false);
+							}}
 							className="text-gray-800 text-xl p-2 hover:bg-gray-100 rounded-xl transition-colors"
 							aria-label="Toggle menu"
 						>
