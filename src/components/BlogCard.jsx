@@ -24,7 +24,7 @@ const extractFirstImage = (content) => {
 
 	// Try to find plain URL
 	const urlMatch = content.match(
-		/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/i
+		/(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/i,
 	);
 	if (urlMatch) return urlMatch[0];
 
@@ -60,7 +60,7 @@ const BlogCard = ({ post }) => {
 				year: "numeric",
 				month: "long",
 				day: "numeric",
-		  })
+			})
 		: "Unknown date";
 
 	return (

@@ -83,7 +83,7 @@ const PopularPosts = ({ posts = [] }) => {
 								month: "long",
 								day: "numeric",
 								year: "numeric",
-						  })
+							})
 						: "";
 
 					return (

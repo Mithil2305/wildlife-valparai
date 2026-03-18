@@ -24,7 +24,9 @@ const enrichCreatorProfilePhoto = async (posts) => {
 	);
 	if (!missingPhotoPosts.length) return posts;
 
-	const uniqueCreatorIds = [...new Set(missingPhotoPosts.map((p) => p.creatorId))];
+	const uniqueCreatorIds = [
+		...new Set(missingPhotoPosts.map((p) => p.creatorId)),
+	];
 	const creatorPhotoMap = new Map();
 
 	await Promise.all(
@@ -40,7 +42,10 @@ const enrichCreatorProfilePhoto = async (posts) => {
 					);
 				}
 			} catch (error) {
-				console.warn("Could not fetch creator photo for post enrichment:", error);
+				console.warn(
+					"Could not fetch creator photo for post enrichment:",
+					error,
+				);
 			}
 		}),
 	);
