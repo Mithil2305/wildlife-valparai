@@ -217,7 +217,10 @@ const Navbar = ({ onStartTutorial = () => {} }) => {
 			}
 		};
 		document.addEventListener("click", handleDocumentClick);
-		window.addEventListener("tutorial:mobile-nav-state", handleTutorialMobileState);
+		window.addEventListener(
+			"tutorial:mobile-nav-state",
+			handleTutorialMobileState,
+		);
 
 		return () => {
 			unsubscribe();

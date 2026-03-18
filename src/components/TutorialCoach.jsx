@@ -16,7 +16,10 @@ const TutorialCoach = ({
 
 	const isElementInteractable = useCallback((el) => {
 		if (!el || !el.isConnected) return false;
-		if (el.hasAttribute("hidden") || el.getAttribute("aria-hidden") === "true") {
+		if (
+			el.hasAttribute("hidden") ||
+			el.getAttribute("aria-hidden") === "true"
+		) {
 			return false;
 		}
 
@@ -77,7 +80,9 @@ const TutorialCoach = ({
 		};
 
 		if (window.innerWidth < 768) {
-			const { needsMenu, needsCreate } = getMobileNavStateForStep(step?.selector);
+			const { needsMenu, needsCreate } = getMobileNavStateForStep(
+				step?.selector,
+			);
 			window.dispatchEvent(
 				new CustomEvent("tutorial:mobile-nav-state", {
 					detail: {
@@ -100,13 +105,7 @@ const TutorialCoach = ({
 			window.removeEventListener("scroll", updateTarget, true);
 			document.removeEventListener("click", onDocumentClick, true);
 		};
-	}, [
-		active,
-		step,
-		onStepClick,
-		findTargetElement,
-		getMobileNavStateForStep,
-	]);
+	}, [active, step, onStepClick, findTargetElement, getMobileNavStateForStep]);
 
 	useEffect(() => {
 		if (!active || !targetElement) return;
