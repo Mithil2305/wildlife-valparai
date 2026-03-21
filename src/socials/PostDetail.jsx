@@ -5,7 +5,20 @@ import SocialCard from "./SocialCard.jsx";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import { FaArrowLeft, FaShare, FaExclamationTriangle } from "react-icons/fa";
 import toast from "react-hot-toast";
-import { buildSharePreviewUrl } from "../services/sharePreview.js";
+
+const fetchImageAsFile = async (imageUrl) => {
+	if (!imageUrl) return null;
+
+	const response = await fetch(imageUrl);
+	if (!response.ok) {
+		throw new Error("Failed to fetch image");
+	}
+
+	const blob = await response.blob();
+	const fileType = blob.type || "image/jpeg";
+	const extension = fileType.split("/")[1] || "jpg";
+	return new File([blob], `wildlife-post.${extension}`, { type: fileType });
+};
 
 const PostDetail = () => {
 	const { postId } = useParams();
@@ -41,19 +54,32 @@ const PostDetail = () => {
 	}, [postId]);
 
 	const handleShare = async () => {
-		const shareUrl = buildSharePreviewUrl({
-			canonicalUrl: window.location.href,
-			title: post?.title || "Check out this post",
-			image: post?.photoUrl || post?.creatorProfilePhoto || "/assets/fav.png",
-			description: "See this wildlife social post on Wildlife Valparai.",
-		});
+		const shareUrl = window.location.href;
+		const shareImage = post?.photoUrl || post?.creatorProfilePhoto || "";
+		const shareTitle = post?.title || "Check out this post";
+		const shareText = `${post?.title || "Amazing wildlife content"}\n${shareUrl}`;
 		try {
 			if (navigator.share) {
+				if (shareImage && navigator.canShare) {
+					try {
+						const imageFile = await fetchImageAsFile(shareImage);
+						if (imageFile && navigator.canShare({ files: [imageFile] })) {
+							await navigator.share({
+								title: shareTitle,
+								text: shareText,
+								url: shareUrl,
+								files: [imageFile],
+							});
+							return;
+						}
+					} catch {
+						// Continue with non-file share fallback.
+					}
+				}
+
 				await navigator.share({
-					title: post?.title || "Check out this post",
-					text: `${
-						post?.title || "Amazing wildlife content"
-					} on Wildlife Valparai`,
+					title: shareTitle,
+					text: `${shareText}\n${shareImage}`,
 					url: shareUrl,
 				});
 			} else {

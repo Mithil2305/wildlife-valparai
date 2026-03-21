@@ -8,10 +8,7 @@ import NotFound from "../components/NotFound.jsx";
 import PopularPosts from "../components/PopularPosts.jsx";
 import AdContainer from "../components/AdContainer.jsx";
 import SocialShareButtons from "./SocialShareButtons.jsx";
-import {
-	buildSharePreviewUrl,
-	extractFirstImageFromHtml,
-} from "../services/sharePreview.js";
+import { extractFirstImageFromHtml } from "../services/sharePreview.js";
 import BlogCard from "../components/BlogCard.jsx";
 import ReportButton from "../components/ReportButton.jsx";
 import FollowButton from "../components/FollowButton.jsx";
@@ -135,13 +132,6 @@ const BlogDetail = () => {
 		post.creatorProfilePhoto ||
 		"/assets/fav.png";
 
-	const shareUrl = buildSharePreviewUrl({
-		canonicalUrl: postUrl,
-		title: post.title || "Check out this post",
-		image: shareThumbnail,
-		description: "Read this wildlife blog on Wildlife Valparai.",
-	});
-
 	const formattedDate = post.createdAt
 		? new Date(post.createdAt.toDate()).toLocaleDateString("en-US", {
 				year: "numeric",
@@ -201,7 +191,7 @@ const BlogDetail = () => {
 							{/* Social Share Buttons & Report */}
 							<div className="flex items-center justify-between">
 								<SocialShareButtons
-									url={shareUrl}
+									url={postUrl}
 									title={post.title || "Check out this post"}
 									image={shareThumbnail}
 								/>
