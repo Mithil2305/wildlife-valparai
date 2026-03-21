@@ -5,6 +5,7 @@ import SocialCard from "./SocialCard.jsx";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import { FaArrowLeft, FaShare, FaExclamationTriangle } from "react-icons/fa";
 import toast from "react-hot-toast";
+import { buildSharePreviewUrl } from "../services/sharePreview.js";
 
 const PostDetail = () => {
 	const { postId } = useParams();
@@ -40,7 +41,12 @@ const PostDetail = () => {
 	}, [postId]);
 
 	const handleShare = async () => {
-		const shareUrl = window.location.href;
+		const shareUrl = buildSharePreviewUrl({
+			canonicalUrl: window.location.href,
+			title: post?.title || "Check out this post",
+			image: post?.photoUrl || post?.creatorProfilePhoto || "/assets/fav.png",
+			description: "See this wildlife social post on Wildlife Valparai.",
+		});
 		try {
 			if (navigator.share) {
 				await navigator.share({

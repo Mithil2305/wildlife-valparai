@@ -18,20 +18,21 @@ const ShareButton = ({ icon, href, colorClass }) => (
 	</a>
 );
 
-const SocialShareButtons = ({ url, title }) => {
+const SocialShareButtons = ({ url, title, image }) => {
 	const encodedUrl = encodeURIComponent(url);
 	const encodedTitle = encodeURIComponent(title);
+	const encodedImage = encodeURIComponent(image || "");
 
 	return (
 		<div className="flex items-center space-x-3 my-6">
 			<ShareButton
 				icon={<FaWhatsapp size={20} />}
-				href={`https://api.whatsapp.com/send?text=${encodedTitle}%20${encodedUrl}`}
+				href={`https://api.whatsapp.com/send?text=${encodedUrl}`}
 				colorClass="bg-green-500"
 			/>
 			<ShareButton
 				icon={<FaPinterestP size={20} />}
-				href={`https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${encodedTitle}`}
+				href={`https://pinterest.com/pin/create/button/?url=${encodedUrl}&media=${encodedImage}&description=${encodedTitle}`}
 				colorClass="bg-red-600"
 			/>
 			<ShareButton
