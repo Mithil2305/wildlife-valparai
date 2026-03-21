@@ -73,13 +73,21 @@ const PostDetail = () => {
 							return;
 						}
 					} catch {
-						// Continue with non-file share fallback.
+						toast.error("Image file share failed on this device.");
+						return;
 					}
+				}
+
+				if (shareImage) {
+					toast.error(
+						"This device does not support sharing image files to apps.",
+					);
+					return;
 				}
 
 				await navigator.share({
 					title: shareTitle,
-					text: `${shareText}\n${shareImage}`,
+					text: shareText,
 					url: shareUrl,
 				});
 			} else {

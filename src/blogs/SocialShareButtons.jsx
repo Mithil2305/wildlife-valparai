@@ -1,4 +1,5 @@
 import React from "react";
+import toast from "react-hot-toast";
 import {
 	FaWhatsapp,
 	FaPinterestP,
@@ -50,21 +51,14 @@ const SocialShareButtons = ({ url, title, image }) => {
 	const encodedUrl = encodeURIComponent(url);
 	const encodedTitle = encodeURIComponent(title);
 	const encodedImage = encodeURIComponent(image || "");
-	const whatsappFallbackText = encodeURIComponent(
-		`${title}\n${image || ""}\n${url}`,
-	);
 
 	const handleWhatsAppShare = async () => {
 		const shareText = `${title}\n${url}`;
 
 		try {
-			if (navigator.share && image) {
+			if (navigator.share && image && navigator.canShare) {
 				const imageFile = await fetchImageAsFile(image);
-				if (
-					imageFile &&
-					navigator.canShare &&
-					navigator.canShare({ files: [imageFile] })
-				) {
+				if (imageFile && navigator.canShare({ files: [imageFile] })) {
 					await navigator.share({
 						title,
 						text: shareText,
@@ -75,14 +69,11 @@ const SocialShareButtons = ({ url, title, image }) => {
 				}
 			}
 		} catch {
-			// Fallback to WhatsApp URL share when file sharing is unavailable.
+			toast.error("Image file share failed on this device.");
+			return;
 		}
 
-		window.open(
-			`https://api.whatsapp.com/send?text=${whatsappFallbackText}`,
-			"_blank",
-			"noopener,noreferrer",
-		);
+		toast.error("This device does not support sharing image files to apps.");
 	};
 
 	return (
