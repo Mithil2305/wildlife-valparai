@@ -33,6 +33,7 @@ const RATE_LIMITS = {
 	email: { requests: 5, windowSeconds: 300 }, // 5 emails per 5 minutes
 	config: { requests: 30, windowSeconds: 60 }, // 30 config requests per minute
 	captcha: { requests: 20, windowSeconds: 60 }, // 20 captcha verifications per minute
+	shareImage: { requests: 60, windowSeconds: 60 }, // 60 image proxy fetches per minute
 	default: { requests: 100, windowSeconds: 60 }, // 100 requests per minute default
 };
 
@@ -141,6 +142,24 @@ export default {
 				return rateLimitResponse(rateLimitResult, origin);
 			}
 			return handleCaptchaVerify(request, env, origin, clientIP);
+		}
+
+		// Route: Proxy image for app-to-app sharing (rate limited)
+		if (
+			(url.pathname === "/media/share-image" ||
+				url.pathname === "/share-image") &&
+			request.method === "GET"
+		) {
+			const rateLimitResult = await checkRateLimit(
+				env,
+				clientIP,
+				"shareImage",
+				RATE_LIMITS.shareImage,
+			);
+			if (!rateLimitResult.allowed) {
+				return rateLimitResponse(rateLimitResult, origin);
+			}
+			return handleShareImage(request, env, origin);
 		}
 
 		// Route: Health check (minimal rate limiting)
@@ -733,6 +752,98 @@ async function handleSponsorEmail(request, env, origin) {
 	} catch (error) {
 		console.error("Sponsor email error:", error.message);
 		return new Response(JSON.stringify({ error: "Failed to send email" }), {
+			status: 500,
+			headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+		});
+	}
+}
+
+/**
+ * Proxy a remote image URL to bypass browser CORS for Web Share file attachments.
+ * @param {Request} request - Incoming request
+ * @param {Object} env - Worker environment
+ * @param {string} origin - Request origin
+ */
+async function handleShareImage(request, env, origin) {
+	try {
+		const requestUrl = new URL(request.url);
+		const targetParam = requestUrl.searchParams.get("url");
+
+		if (!targetParam) {
+			return new Response(JSON.stringify({ error: "Missing image url" }), {
+				status: 400,
+				headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+			});
+		}
+
+		let targetUrl;
+		try {
+			targetUrl = new URL(targetParam);
+		} catch {
+			return new Response(JSON.stringify({ error: "Invalid image url" }), {
+				status: 400,
+				headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+			});
+		}
+
+		if (targetUrl.protocol !== "https:") {
+			return new Response(
+				JSON.stringify({ error: "Only https images allowed" }),
+				{
+					status: 400,
+					headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+				},
+			);
+		}
+
+		const allowedHosts = [
+			new URL(env.PUBLIC_BUCKET_URL).host,
+			"wildlifevalparai.com",
+			"www.wildlifevalparai.com",
+		];
+
+		if (!allowedHosts.includes(targetUrl.host)) {
+			return new Response(JSON.stringify({ error: "Image host not allowed" }), {
+				status: 403,
+				headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+			});
+		}
+
+		const upstream = await fetch(targetUrl.toString(), {
+			method: "GET",
+			headers: {
+				"User-Agent": "WildlifeValparaiShareImageProxy/1.0",
+			},
+		});
+
+		if (!upstream.ok) {
+			return new Response(JSON.stringify({ error: "Image not reachable" }), {
+				status: 502,
+				headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+			});
+		}
+
+		const contentType = upstream.headers.get("content-type") || "";
+		if (!contentType.startsWith("image/")) {
+			return new Response(JSON.stringify({ error: "URL is not an image" }), {
+				status: 400,
+				headers: corsHeaders(origin, { "Content-Type": "application/json" }),
+			});
+		}
+
+		const body = await upstream.arrayBuffer();
+		const extension = contentType.includes("png") ? "png" : "jpg";
+		return new Response(body, {
+			status: 200,
+			headers: corsHeaders(origin, {
+				"Content-Type": contentType,
+				"Content-Disposition": `inline; filename=wildlife-share.${extension}`,
+				"Cache-Control": "public, max-age=3600",
+			}),
+		});
+	} catch (error) {
+		console.error("Share image proxy error:", error.message);
+		return new Response(JSON.stringify({ error: "Failed to proxy image" }), {
 			status: 500,
 			headers: corsHeaders(origin, { "Content-Type": "application/json" }),
 		});

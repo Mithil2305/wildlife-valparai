@@ -1,5 +1,6 @@
 import React from "react";
 import toast from "react-hot-toast";
+import { fetchShareImageBlob } from "../services/workerApi.js";
 import {
 	FaWhatsapp,
 	FaPinterestP,
@@ -36,14 +37,9 @@ const ShareButton = ({ icon, href, colorClass, onClick }) => {
 const fetchImageAsFile = async (imageUrl) => {
 	if (!imageUrl) return null;
 
-	const response = await fetch(imageUrl);
-	if (!response.ok) {
-		throw new Error("Failed to fetch image");
-	}
-
-	const blob = await response.blob();
+	const blob = await fetchShareImageBlob(imageUrl);
 	const fileType = blob.type || "image/jpeg";
-	const extension = fileType.split("/")[1] || "jpg";
+	const extension = fileType.includes("png") ? "png" : "jpg";
 	return new File([blob], `wildlife-post.${extension}`, { type: fileType });
 };
 
@@ -62,14 +58,13 @@ const SocialShareButtons = ({ url, title, image }) => {
 					await navigator.share({
 						title,
 						text: shareText,
-						url,
 						files: [imageFile],
 					});
 					return;
 				}
 			}
-		} catch {
-			toast.error("Image file share failed on this device.");
+		} catch (error) {
+			toast.error(error?.message || "Image file share failed on this device.");
 			return;
 		}
 

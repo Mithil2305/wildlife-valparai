@@ -151,3 +151,43 @@ export const verifyCaptcha = async (token) => {
 		throw error;
 	}
 };
+
+/**
+ * Fetch image bytes through the worker proxy to avoid browser CORS failures.
+ * @param {string} imageUrl - Original image URL
+ * @returns {Promise<Blob>} Image blob
+ */
+export const fetchShareImageBlob = async (imageUrl) => {
+	if (!imageUrl) {
+		throw new Error("Image URL is required");
+	}
+
+	const encodedUrl = encodeURIComponent(imageUrl);
+	const endpoints = [
+		`${WORKER_URL}/media/share-image?url=${encodedUrl}`,
+		`${WORKER_URL}/share-image?url=${encodedUrl}`,
+	];
+
+	let lastStatus = null;
+
+	for (const endpoint of endpoints) {
+		const response = await fetch(endpoint, { method: "GET" });
+
+		if (response.ok) {
+			const blob = await response.blob();
+			if (!blob.type || !blob.type.startsWith("image/")) {
+				throw new Error("Share proxy returned non-image content");
+			}
+			return blob;
+		}
+
+		lastStatus = response.status;
+		if (response.status !== 404) {
+			throw new Error(`Failed to fetch share image: ${response.status}`);
+		}
+	}
+
+	throw new Error(
+		`Share image endpoint not found on worker (${lastStatus || "unknown"}). Deploy the latest worker code.`,
+	);
+};

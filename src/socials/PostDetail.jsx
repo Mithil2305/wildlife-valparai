@@ -5,18 +5,14 @@ import SocialCard from "./SocialCard.jsx";
 import LoadingSpinner from "../components/LoadingSpinner.jsx";
 import { FaArrowLeft, FaShare, FaExclamationTriangle } from "react-icons/fa";
 import toast from "react-hot-toast";
+import { fetchShareImageBlob } from "../services/workerApi.js";
 
 const fetchImageAsFile = async (imageUrl) => {
 	if (!imageUrl) return null;
 
-	const response = await fetch(imageUrl);
-	if (!response.ok) {
-		throw new Error("Failed to fetch image");
-	}
-
-	const blob = await response.blob();
+	const blob = await fetchShareImageBlob(imageUrl);
 	const fileType = blob.type || "image/jpeg";
-	const extension = fileType.split("/")[1] || "jpg";
+	const extension = fileType.includes("png") ? "png" : "jpg";
 	return new File([blob], `wildlife-post.${extension}`, { type: fileType });
 };
 
@@ -67,13 +63,14 @@ const PostDetail = () => {
 							await navigator.share({
 								title: shareTitle,
 								text: shareText,
-								url: shareUrl,
 								files: [imageFile],
 							});
 							return;
 						}
-					} catch {
-						toast.error("Image file share failed on this device.");
+					} catch (error) {
+						toast.error(
+							error?.message || "Image file share failed on this device.",
+						);
 						return;
 					}
 				}
